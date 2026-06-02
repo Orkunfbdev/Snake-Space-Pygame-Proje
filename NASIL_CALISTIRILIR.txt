@@ -1,5 +1,8 @@
 Snake Space
 
+Direkt calistirma:
+SnakeSpace.exe dosyasina cift tikla.
+
 Calistirma:
 py main.py
 

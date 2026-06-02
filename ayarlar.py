@@ -1,6 +1,7 @@
+import sys
 from pathlib import Path
 import pygame
-KOK = Path(__file__).resolve().parent
+KOK = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
 
 # Pencere, FPS ve oyun alaninin grid ayarlari.
 W, H, FPS = 1000, 760, 120
