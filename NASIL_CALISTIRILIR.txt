@@ -1,0 +1,14 @@
+Snake Space
+
+Calistirma:
+py main.py
+
+Kontroller:
+W A S D veya ok tuslari: yon degistir
+R: yeniden baslat
+ESC: menuye don
+
+Mantik:
+Her levelde ayni anda 1 elma cikar. Elma toplaninca yenisi rastgele bos ve ulasilabilir bir yere gelir.
+Leveldeki elmalar bitince cikis kapisi acilir. Kapiya girince sonraki levele gecilir.
+Puan, elmayi alma hizina gore hesaplanir.
