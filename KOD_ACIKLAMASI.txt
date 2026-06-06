@@ -1,29 +1,29 @@
 Snake Space kod aciklamasi
 
 main.py
-- Oyun sinifini olusturur.
-- Normal calistirmada oyunu baslatir.
-- --smoke-test verilirse sadece ekrani bir kez cizip kapanir. Bu test icin kullanildi.
+- Oyun sinifini olusturur ve oyunu baslatir.
+- --smoke-test verilirse sadece bir ekran cizip kapanir.
 
 ayarlar.py
-- Pencere boyutu, FPS, kare boyutu, harita satir/sutun sayisi burada tutulur.
-- Renkler burada tanimlanir.
-- resim() fonksiyonu PNG dosyalarini yukler ve gerekirse boyutunu degistirir.
-- sure_yaz() saniyeyi dakika:saniye formatina cevirir.
+- Pencere boyutu, FPS, grid bilgileri ve renkler burada tutulur.
+- sure_yaz fonksiyonu saniyeyi 00:00 formatina cevirir.
+
+assetler.py
+- SnakeSpaceGUI klasorundeki gorselleri yukler.
+- Yuklenen gorseller cache icinde tutulur; ayni gorsel tekrar tekrar diskten okunmaz.
+- PyInstaller exe icinde de calissin diye _MEIPASS yolu desteklenir.
+- Ses dosyalari SnakeSpaceGUI/Audio klasorunden okunur.
 
 oyun.py
-- __init__: Pygame'i baslatir, pencereyi acar, fontlari ve gorselleri yukler.
-- kafa_hazirla: preview.png icinden yilan kafasini alip 4 yone cevirir.
-- yeni_oyun: Level, puan ve sureyi sifirlayip oyunu baslatir.
-- level_kur: Yeni level icin yilan, engel, elma ve kapi ayarlarini yapar.
-- hedef: Levelde kac elma toplanacagini hesaplar. Ilk level 3, ikinci level 5, sonra 3'er artar.
-- hiz: Level arttikca hareket gecikmesini azaltir, yani yilan hizlanir.
-- engel_uret: Haritaya rastgele engeller koyar.
-- elma_uret: Ekranda ayni anda sadece 1 elma olacak sekilde yeni elma uretir. Elmalar bitince kapi acilir.
-- olaylar/tus: Klavye tuslarini okur. W A S D veya ok tuslariyla yon degisir.
-- guncelle: Yilani ilerletir, elma toplama, carpma ve level gecme kontrollerini yapar.
-- carpti: Duvar, engel veya kendi govdesine carpildi mi kontrol eder.
-- elma_topla: Zamana gore puan hesaplar ve yeni elma uretir.
-- ciz/menu_ciz/oyun_ciz: Ekranlari cizer.
-- yilan_ciz: Yilanin govdesini ve kafasini cizer.
-- calistir: Ana oyun dongusudur.
+- Ana oyun sinifi buradadir.
+- Durum sistemi kullanilir: menu, ayarlar, cikis, level_menu, gecis, oyun, kazandin, kaybettin.
+- Level menu, SnakeSpaceGUI/Level Menus altindaki bolge ve gezegen gorselleriyle cizilir.
+- Gezegen gecis animasyonu, secilen levelin planet gorselini buyutup leveli baslatir.
+- Oyun ekraninda her level kendi bg_world, checkers, item_fruit, fx_portal ve wall_block gorsellerini kullanir.
+- Yilan kare sprite olarak degil, kalin yuvarlak pygame cizgileriyle tek parca gibi cizilir.
+- Menu muzigi ana ekranda surekli calar; oyun baslayinca 10 saniye sonra durur.
+- Ayarlar ekranindaki - ve + tuslari menu muziginin ses seviyesini degistirir.
+- Kaybedince game over sesi bir kez calar.
+- Elma toplandikca puan sureye gore hesaplanir.
+- Level hedefindeki meyveler bitince portal acilir.
+- Portal girilince level kazanilir ve sonraki level kilidi acilir.

@@ -3,15 +3,17 @@ Snake Space
 Direkt calistirma:
 SnakeSpace.exe dosyasina cift tikla.
 
-Calistirma:
+Koddan calistirma:
 py main.py
 
 Kontroller:
 W A S D veya ok tuslari: yon degistir
-R: yeniden baslat
-ESC: menuye don
+R: leveli yeniden baslat
+ESC: level menuye don
 
-Mantik:
-Her levelde ayni anda 1 elma cikar. Elma toplaninca yenisi rastgele bos ve ulasilabilir bir yere gelir.
-Leveldeki elmalar bitince cikis kapisi acilir. Kapiya girince sonraki levele gecilir.
-Puan, elmayi alma hizina gore hesaplanir.
+Level menu:
+Sag ok tusu veya ekrandaki ok: sonraki bolge
+Gezegene tikla: acik olan leveli baslat
+
+Not:
+Tum yeni gorseller SnakeSpaceGUI klasorunden kullanilir.
