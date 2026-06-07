@@ -369,7 +369,7 @@ class Oyun:
         self.ekran.blit(self.a.fixed("logo_main.png", (170, 75)), (55, 50))
         self.yazi(f"Bölge {self.region} / 5", self.buyuk, BEYAZ, (W // 2, 60))
         panel = self.a.region(self.region, f"ui_panel_region_{self.region}_info.png")
-        panel_rect = panel.get_rect(topleft=(260, 94))
+        panel_rect = panel.get_rect(topright=(W - 58, 50))
         self.ekran.blit(panel, panel_rect)
         baslik, aciklama = BOLGELER[self.region]
         self.yazi(baslik, self.font, (35, 35, 45), (panel_rect.centerx, panel_rect.y + 27))
@@ -384,9 +384,10 @@ class Oyun:
             rect = gezegen.get_rect(center=(x, 390))
             self.ekran.blit(gezegen, rect)
             self.level_rects.append((level, rect.inflate(20, 20)))
-            etiket = self.a.fixed("ui_label_bg_active.png" if level == self.acik_level else "ui_label_bg.png", (150, 54))
+            acik = level <= self.acik_level
+            etiket = self.a.fixed("ui_label_bg_active.png" if acik else "ui_label_bg.png", (150, 54))
             self.ekran.blit(etiket, etiket.get_rect(center=(x, 520)))
-            self.yazi(f"Level {level}", self.font, BEYAZ, (x, 520))
+            self.yazi(f"Level {level}", self.font, BEYAZ if acik else (78, 78, 92), (x, 520))
         self.next_region_rect = pygame.Rect(W - 105, H // 2 - 36, 72, 72)
         self.ekran.blit(self.a.fixed("btn_bg_round_gray.png", (72, 72)), self.next_region_rect)
         self.ekran.blit(self.a.fixed("icon_arrow_right.png", (32, 28)), (W - 85, H // 2 - 14))
