@@ -719,16 +719,25 @@ class Oyun:
 
     def ayarlar_ciz(self):
         self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Settings", "ui_modal_bg.png")
+        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(540, 360))
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
-        self.yazi("Ayarlar", self.buyuk, (115, 42, 145), (W // 2, r.y + 78))
-        self.music_toggle = pygame.Rect(W // 2 - 165, r.y + 115, 150, 50)
-        self.effects_toggle = pygame.Rect(W // 2 + 15, r.y + 115, 150, 50)
-        self.yazi(f"Müzik Sesi: %{int(self.muzik_ses * 100)}", self.font, (55, 55, 65), (W // 2, r.y + 198))
-        self.volume_down = pygame.Rect(W // 2 - 190, r.y + 172, 64, 54)
-        self.volume_up = pygame.Rect(W // 2 + 126, r.y + 172, 64, 54)
-        self.settings_close = pygame.Rect(W // 2 - 75, r.bottom - 64, 150, 54)
+        self.yazi("Ayarlar", self.buyuk, BEYAZ, (W // 2, r.y + 40))
+        muzik_kutu = pygame.Rect(r.x + 55, r.y + 86, r.w - 110, 118)
+        efekt_kutu = pygame.Rect(r.x + 55, r.y + 216, r.w - 110, 72)
+        pygame.draw.rect(self.ekran, (238, 240, 244), muzik_kutu, border_radius=18)
+        pygame.draw.rect(self.ekran, (238, 240, 244), efekt_kutu, border_radius=18)
+        pygame.draw.rect(self.ekran, (205, 210, 218), muzik_kutu, 2, border_radius=18)
+        pygame.draw.rect(self.ekran, (205, 210, 218), efekt_kutu, 2, border_radius=18)
+        self.yazi("Müzik", self.font, (55, 55, 65), (muzik_kutu.x + 100, muzik_kutu.y + 32))
+        self.music_toggle = pygame.Rect(muzik_kutu.x + 24, muzik_kutu.y + 58, 150, 50)
+        self.yazi(f"Ses: %{int(self.muzik_ses * 100)}", self.kucuk, (55, 55, 65),
+                  (muzik_kutu.x + 318, muzik_kutu.y + 34))
+        self.volume_down = pygame.Rect(muzik_kutu.x + 235, muzik_kutu.y + 60, 54, 42)
+        self.volume_up = pygame.Rect(muzik_kutu.x + 347, muzik_kutu.y + 60, 54, 42)
+        self.yazi("Efekt Sesleri", self.font, (55, 55, 65), (efekt_kutu.x + 130, efekt_kutu.centery))
+        self.effects_toggle = pygame.Rect(efekt_kutu.right - 174, efekt_kutu.y + 11, 150, 50)
+        self.settings_close = pygame.Rect(W // 2 - 75, r.bottom - 62, 150, 54)
         self.buton_resimli(self.music_toggle, ("Settings", "btn_bg_green.png" if self.ses_acik else "btn_bg_red.png"),
                            None, f"Müzik {'Açık' if self.ses_acik else 'Kapalı'}")
         self.buton_resimli(self.effects_toggle, ("Settings", "btn_bg_green.png" if self.efekt_acik else "btn_bg_red.png"),
@@ -738,15 +747,22 @@ class Oyun:
         self.buton_resimli(self.settings_close, ("Settings", "btn_bg_red.png"), None, "Kapat")
 
     def cikis_ciz(self):
-        self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Quit", "ui_modal_bg.png")
+        self.kutu((0, 0, W, H), 105)
+        modal = self.a.al("Quit", "ui_modal_bg.png", boyut=(430, 272))
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
-        self.yazi("Çıkmak istiyor musun?", self.buyuk, (45, 45, 55), (W // 2, r.y + 125))
-        self.quit_yes = pygame.Rect(W // 2 - 220, r.bottom - 115, 200, 72)
-        self.quit_no = pygame.Rect(W // 2 + 20, r.bottom - 115, 200, 72)
-        self.buton_resimli(self.quit_yes, ("Quit", "btn_bg_green.png"), ("Quit", "icon_check.png"), "Evet")
-        self.buton_resimli(self.quit_no, ("Quit", "btn_bg_red.png"), ("Quit", "icon_cross_white.png"), "Hayır")
+        self.yazi("ÇIKIŞ", self.buyuk, BEYAZ, (W // 2, r.y + 36))
+        self.yazi("Oyundan Çıkmak", self.font, (70, 70, 78), (W // 2, r.y + 98))
+        self.yazi("istediğinize emin misiniz?", self.font, (70, 70, 78), (W // 2, r.y + 128))
+        self.quit_yes = pygame.Rect(r.x + 58, r.y + 174, 145, 54)
+        self.quit_no = pygame.Rect(r.x + 226, r.y + 174, 145, 54)
+        self.cikis_buton_ciz(self.quit_yes, "btn_bg_green.png", "icon_check.png", "EVET")
+        self.cikis_buton_ciz(self.quit_no, "btn_bg_red.png", "icon_cross_white.png", "HAYIR")
+
+    def cikis_buton_ciz(self, rect, bg, ikon, metin):
+        self.ekran.blit(self.a.al("Quit", bg, boyut=rect.size), rect)
+        self.ekran.blit(self.a.al("Quit", ikon, boyut=(30, 30)), (rect.x + 14, rect.y + 12))
+        self.yazi(metin, self.font, BEYAZ, (rect.centerx + 18, rect.centery))
 
     def buton_resimli(self, rect, bg, ikon, metin):
         self.ekran.blit(self.a.al(*bg, boyut=rect.size), rect)
