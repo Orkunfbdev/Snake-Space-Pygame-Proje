@@ -16,7 +16,10 @@ assetler.py
 
 oyun.py
 - Ana oyun sinifi buradadir.
-- Durum sistemi kullanilir: menu, ayarlar, cikis, level_menu, gecis, oyun, kazandin, kaybettin.
+- Durum sistemi kullanilir: menu, mod_menu, ayarlar, cikis, level_menu, gecis, oyun, kazandin, kaybettin.
+- Oyuna baslarken normal mod veya zorlayici mod secilir.
+- Normal modda level baslangic puani checkpoint olarak tutulur; kaybedince ayni level bu puanla tekrar baslar.
+- Zorlayici modda oyun daha hizli ve daha engellidir; kaybedince puan ve acilan leveller sifirlanir.
 - Level menu, SnakeSpaceGUI/Level Menus altindaki bolge ve gezegen gorselleriyle cizilir.
 - Gezegen gecis animasyonu, secilen levelin planet gorselini buyutup leveli baslatir.
 - Oyun ekraninda her level kendi bg_world, checkers, item_fruit, fx_portal ve wall_block gorsellerini kullanir.

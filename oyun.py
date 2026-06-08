@@ -39,16 +39,19 @@ class Oyun:
         self.menu_durus_zamani = 0
         self.menu_fade_suresi = 2000
         self.durum = "menu"
+        self.oyun_modu = "normal"
         self.region = 1
         self.level = 1
         self.acik_level = 1
         self.puan = 0
+        self.level_puan_baslangic = 0
         self.rekor = 0
         self.ses_acik = True
         self.muzik_ses = 0.70
         self.kazandi = False
         self.gecis_basla = 0
         self.gecis_level = 1
+        self.gecis_puan = None
         self.son_sure = -1
         self.sesleri_hazirla()
         self.level_kur()
@@ -144,7 +147,10 @@ class Oyun:
         return 3 if self.level == 1 else 5 + (self.level - 2) * 3
 
     def hiz(self):
-        return max(50, 112 - self.level * 4)
+        taban = 112 - self.level * 4
+        if self.oyun_modu == "zor":
+            taban -= 14
+        return max(42, taban)
 
     def engel_uret(self):
         rnd = random.Random(self.level * 77)
@@ -152,6 +158,8 @@ class Oyun:
         guvenli_baslangic = {(x, y) for x in range(3, 12) for y in range(6, 11)}
         yasak = set(self.yilan) | guvenli_baslangic | {self.kapi_yeri}
         adet = 4 + self.level * 2
+        if self.oyun_modu == "zor":
+            adet += 3 + self.level // 2
         while len(engel) < adet:
             yer = (rnd.randrange(2, SUTUN - 2), rnd.randrange(2, SATIR - 2))
             if yer not in yasak:
@@ -179,14 +187,15 @@ class Oyun:
         durum = "locked" if kilitli else "color"
         return ("Level Menus", f"Region {bolge}", f"level_{level:02d}_planet_{durum}.png")
 
-    def gecis_baslat(self, level):
+    def gecis_baslat(self, level, puan=None):
         self.gecis_level = level
+        self.gecis_puan = puan
         self.region = self.bolge_no(level)
         self.level_gecis_sesi_cal()
         self.gecis_basla = pygame.time.get_ticks()
         self.durum = "gecis"
 
-    def level_baslat(self, level):
+    def level_baslat(self, level, puan=None):
         if self.game_over_sesi:
             self.game_over_sesi.stop()
         if self.level_gecis_sesi:
@@ -194,10 +203,35 @@ class Oyun:
         if self.ses_hazir and self.menu_caliyor:
             pygame.mixer.music.set_volume(self.muzik_ses)
         self.level = level
-        self.puan = 0 if level == 1 else self.puan
+        if puan is not None:
+            self.puan = puan
+        elif level == 1:
+            self.puan = 0
+        self.level_puan_baslangic = self.puan
         self.level_kur()
         self.menu_muzigi_oyunda_kapat()
         self.durum = "oyun"
+
+    def mod_baslat(self, mod):
+        self.oyun_modu = mod
+        self.region = 1
+        self.level = 1
+        self.acik_level = 1
+        self.puan = 0
+        self.level_puan_baslangic = 0
+        self.kazandi = False
+        self.level_kur()
+        self.durum = "level_menu"
+        self.menu_muzigi_baslat()
+
+    def zor_mod_sifirla(self):
+        self.region = 1
+        self.level = 1
+        self.acik_level = 1
+        self.puan = 0
+        self.level_puan_baslangic = 0
+        self.kazandi = False
+        self.level_kur()
 
     def olaylar(self):
         degisti = False
@@ -214,7 +248,18 @@ class Oyun:
     def tus(self, tus):
         if self.durum == "menu":
             if tus in (pygame.K_RETURN, pygame.K_SPACE):
-                self.durum = "level_menu"
+                self.durum = "mod_menu"
+                self.menu_muzigi_baslat()
+                return True
+        if self.durum == "mod_menu":
+            if tus == pygame.K_1:
+                self.mod_baslat("zor")
+                return True
+            if tus in (pygame.K_2, pygame.K_RETURN, pygame.K_SPACE):
+                self.mod_baslat("normal")
+                return True
+            if tus == pygame.K_ESCAPE:
+                self.durum = "menu"
                 self.menu_muzigi_baslat()
                 return True
         if self.durum == "level_menu":
@@ -240,7 +285,7 @@ class Oyun:
                 self.menu_muzigi_baslat()
                 return True
             if tus == pygame.K_r:
-                self.level_baslat(self.level)
+                self.level_baslat(self.level, self.level_puan_baslangic)
                 return True
         if self.durum in ("kazandin", "kaybettin") and tus in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_r):
             self.sonuc_devam()
@@ -254,20 +299,32 @@ class Oyun:
     def tikla(self, pos):
         if self.durum == "menu":
             if self.play_rect.collidepoint(pos):
-                self.durum = "level_menu"
+                self.durum = "mod_menu"
                 self.menu_muzigi_baslat()
             elif self.settings_rect.collidepoint(pos):
                 self.durum = "ayarlar"
             elif self.exit_rect.collidepoint(pos):
                 self.durum = "cikis"
             return True
+        if self.durum == "mod_menu":
+            if self.hard_mode_rect.collidepoint(pos):
+                self.mod_baslat("zor")
+                return True
+            if self.normal_mode_rect.collidepoint(pos):
+                self.mod_baslat("normal")
+                return True
+            if self.mode_back_rect.collidepoint(pos):
+                self.durum = "menu"
+                self.menu_muzigi_baslat()
+                return True
         if self.durum == "level_menu":
             if self.next_region_rect.collidepoint(pos):
                 self.region = self.region % 5 + 1
                 return True
             for level, rect in self.level_rects:
                 if rect.collidepoint(pos) and level <= self.acik_level:
-                    self.gecis_baslat(level)
+                    puan = self.level_puan_baslangic if level == self.level else 0
+                    self.gecis_baslat(level, puan)
                     return True
         if self.durum == "ayarlar":
             if self.settings_save.collidepoint(pos):
@@ -297,6 +354,8 @@ class Oyun:
                 return True
         if self.durum in ("kazandin", "kaybettin"):
             if self.result_main.inflate(26, 22).collidepoint(pos):
+                if self.oyun_modu == "zor":
+                    self.zor_mod_sifirla()
                 self.durum = "level_menu"
                 self.menu_muzigi_baslat()
                 return True
@@ -307,9 +366,13 @@ class Oyun:
 
     def sonuc_devam(self):
         if self.durum == "kaybettin":
-            self.level_baslat(self.level)
+            if self.oyun_modu == "zor":
+                self.zor_mod_sifirla()
+                self.gecis_baslat(1, 0)
+            else:
+                self.level_baslat(self.level, self.level_puan_baslangic)
         elif self.level < SON_LEVEL:
-            self.gecis_baslat(self.level + 1)
+            self.gecis_baslat(self.level + 1, self.puan)
         else:
             self.durum = "level_menu"
             self.menu_muzigi_baslat()
@@ -318,7 +381,7 @@ class Oyun:
         self.sesleri_guncelle()
         if self.durum == "gecis":
             if pygame.time.get_ticks() - self.gecis_basla > self.gecis_suresi:
-                self.level_baslat(self.gecis_level)
+                self.level_baslat(self.gecis_level, self.gecis_puan)
                 return True
             return True
         if self.durum != "oyun" or pygame.time.get_ticks() - self.son_hareket < self.hiz():
@@ -361,6 +424,8 @@ class Oyun:
     def ciz(self):
         if self.durum == "menu":
             self.menu_ciz()
+        elif self.durum == "mod_menu":
+            self.mod_menu_ciz()
         elif self.durum == "level_menu":
             self.level_menu_ciz()
         elif self.durum == "gecis":
@@ -385,6 +450,19 @@ class Oyun:
         self.buton_resimli(self.play_rect, ("Main Menu", "btn_bg_pink.png"), ("Main Menu", "icon_play.png"), "Oyuna Başla")
         self.buton_resimli(self.settings_rect, ("Main Menu", "btn_bg_gray.png"), ("Main Menu", "icon_settings.png"), "Ayarlar")
         self.buton_resimli(self.exit_rect, ("Main Menu", "btn_bg_red.png"), ("Main Menu", "icon_exit.png"), "Çıkış")
+
+    def mod_menu_ciz(self):
+        self.ekran.blit(self.a.al("Main Menu", "bg_main_menu.png", boyut=(W, H)), (0, 0))
+        self.kutu((260, 115, 760, 485), 125)
+        self.yazi("Oyun Modu", self.buyuk, BEYAZ, (W // 2, 180))
+        self.hard_mode_rect = pygame.Rect(W // 2 - 285, 300, 250, 72)
+        self.normal_mode_rect = pygame.Rect(W // 2 + 35, 300, 250, 72)
+        self.mode_back_rect = pygame.Rect(W // 2 - 105, 510, 210, 58)
+        self.buton_resimli(self.hard_mode_rect, ("Main Menu", "btn_bg_red.png"), None, "Zorlayıcı Mod")
+        self.buton_resimli(self.normal_mode_rect, ("Main Menu", "btn_bg_pink.png"), None, "Normal Mod")
+        self.yazi("Ölünce başa döner", self.kucuk, (230, 230, 240), self.hard_mode_rect.move(0, 55).center)
+        self.yazi("Checkpoint açık", self.kucuk, (230, 230, 240), self.normal_mode_rect.move(0, 55).center)
+        self.buton_resimli(self.mode_back_rect, ("Main Menu", "btn_bg_gray.png"), None, "Geri")
 
     def level_menu_ciz(self):
         self.ekran.blit(self.a.region(self.region, f"bg_level_menu_region_{self.region}.png", (W, H)), (0, 0))
@@ -445,7 +523,10 @@ class Oyun:
     def hud_ciz(self):
         logo = self.a.global_("logo_main.png", (155, 68))
         self.ekran.blit(logo, (60, 34))
-        bilgiler = [("icon_ranking.png", f"Seviye {self.level}"), ("icon_star.png", str(self.puan)),
+        seviye_yazi = f"Seviye {self.level}"
+        if self.oyun_modu == "zor":
+            seviye_yazi += " Zor"
+        bilgiler = [("icon_ranking.png", seviye_yazi), ("icon_star.png", str(self.puan)),
                     ("icon_clock.png", sure_yaz(time.time() - self.baslama)),
                     ("icon_apple.png", f"{self.toplanan}/{self.hedef()}")]
         for i, (ikon, metin) in enumerate(bilgiler):
