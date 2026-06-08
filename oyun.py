@@ -15,6 +15,14 @@ BOLGELER = {
     5: ("Kaos Çekirdeği", "Son bölge. Hedef sayısı ve hız en yüksek seviyededir."),
 }
 
+LEVEL_ADLARI = {
+    1: "Dünya", 2: "Yeni Dünya", 3: "Tropik", 4: "Su Gaz Devi",
+    5: "Çöl", 6: "Kum Fırtınası", 7: "Buz", 8: "Buzul Göktaşı",
+    9: "Çorak Kayalık", 10: "Paslı Kaya", 11: "Dikenli", 12: "Mor Okyanus",
+    13: "Zümrüt", 14: "Turuncu Gaz Devi", 15: "Aurora", 16: "Pembe Krater",
+    17: "Ametist", 18: "Yakut Kristali", 19: "Radyoaktif Çatlak", 20: "Magma Çatlak",
+}
+
 
 class Oyun:
     def __init__(self):
@@ -27,6 +35,7 @@ class Oyun:
         self.a = Assetler()
         self.font = pygame.font.SysFont("arial", 22, bold=True)
         self.kucuk = pygame.font.SysFont("arial", 16)
+        self.mini = pygame.font.SysFont("arial", 11, bold=True)
         self.buyuk = pygame.font.SysFont("arial", 42, bold=True)
         self.menu_muzik = GUI / "Audio" / "game_menu.mp3"
         self.game_over_muzik = GUI / "Audio" / "game_over.wav"
@@ -348,6 +357,9 @@ class Oyun:
                 self.menu_muzigi_baslat()
                 return True
         if self.durum == "level_menu":
+            if self.prev_region_rect.collidepoint(pos):
+                self.region = 5 if self.region == 1 else self.region - 1
+                return True
             if self.next_region_rect.collidepoint(pos):
                 self.region = self.region % 5 + 1
                 return True
@@ -523,33 +535,54 @@ class Oyun:
 
     def level_menu_ciz(self):
         self.ekran.blit(self.a.region(self.region, f"bg_level_menu_region_{self.region}.png", (W, H)), (0, 0))
-        self.kutu((34, 28, 1212, 120), 105)
-        self.ekran.blit(self.a.fixed("logo_main.png", (170, 75)), (55, 50))
-        self.yazi(f"Bölge {self.region} / 5", self.buyuk, BEYAZ, (W // 2, 60))
-        panel = self.a.region(self.region, f"ui_panel_region_{self.region}_info.png")
-        panel_rect = panel.get_rect(topright=(W - 58, 50))
-        self.ekran.blit(panel, panel_rect)
         baslik, aciklama = BOLGELER[self.region]
-        self.yazi(baslik, self.font, (35, 35, 45), (panel_rect.centerx, panel_rect.y + 27))
-        self.yazi(aciklama, self.kucuk, (55, 55, 65), (panel_rect.centerx, panel_rect.y + 55))
+        self.ekran.blit(self.a.fixed("logo_main.png", (155, 68)), (W - 205, 28))
+        yol = self.a.fixed("ui_path_lines_region_1.png", (1080, 376))
+        self.ekran.blit(yol, yol.get_rect(center=(W // 2, H // 2 + 5)))
         self.level_rects = []
         basla = (self.region - 1) * 4 + 1
+        konumlar = [(295, 240), (510, 500), (770, 245), (1005, 490)]
+        boylar = [176, 190, 180, 176]
         for i in range(4):
             level = basla + i
-            x = 250 + i * 235
+            x, y = konumlar[i]
             kilitli = level > self.acik_level
-            gezegen = self.a.al(*self.gezegen_yolu(level, kilitli), boyut=(155, 155))
+            boy = boylar[i]
+            halka = self.a.fixed("fx_ring.png", (boy + 48, boy + 48)).copy()
+            halka.set_alpha(125 if kilitli else 170)
+            self.ekran.blit(halka, halka.get_rect(center=(x, y)))
+            if level == self.acik_level and not kilitli:
+                glow = self.a.fixed("fx_glow_ring.png", (boy + 58, boy + 58)).copy()
+                glow.set_alpha(115)
+                self.ekran.blit(glow, glow.get_rect(center=(x, y)))
+            gezegen = self.a.al(*self.gezegen_yolu(level, kilitli), boyut=(boy, boy))
             rect = gezegen.get_rect(center=(x, 390))
+            rect.center = (x, y)
             self.ekran.blit(gezegen, rect)
-            self.level_rects.append((level, rect.inflate(20, 20)))
-            acik = level <= self.acik_level
-            etiket = self.a.fixed("ui_label_bg_active.png" if acik else "ui_label_bg.png", (150, 54))
-            self.ekran.blit(etiket, etiket.get_rect(center=(x, 520)))
-            self.yazi(f"Level {level}", self.font, BEYAZ if acik else (78, 78, 92), (x, 520))
+            etiket_rect = self.level_etiket_ciz(level, LEVEL_ADLARI[level], (x, y - boy // 2 + 10), not kilitli)
+            self.level_rects.append((level, rect.inflate(30, 30).union(etiket_rect)))
+        panel = self.a.region(self.region, f"ui_panel_region_{self.region}_info.png", (330, 62))
+        panel_rect = panel.get_rect(bottomleft=(82, H - 74))
+        self.ekran.blit(panel, panel_rect)
+        self.yazi(f"Bölge {self.region}: {baslik}", self.kucuk, (40, 42, 48), panel_rect.center)
+        self.prev_region_rect = pygame.Rect(38, H // 2 - 36, 72, 72)
         self.next_region_rect = pygame.Rect(W - 105, H // 2 - 36, 72, 72)
-        self.ekran.blit(self.a.fixed("btn_bg_round_gray.png", (72, 72)), self.next_region_rect)
-        self.ekran.blit(self.a.fixed("icon_arrow_right.png", (32, 28)), (W - 85, H // 2 - 14))
-        self.yazi("ESC menü", self.kucuk, BEYAZ, (72, H - 36))
+        ok_bg = self.a.fixed("btn_bg_round_gray.png", (72, 72))
+        ok = self.a.fixed("icon_arrow_right.png", (32, 28))
+        self.ekran.blit(ok_bg, self.prev_region_rect)
+        self.ekran.blit(pygame.transform.flip(ok, True, False), (58, H // 2 - 14))
+        self.ekran.blit(ok_bg, self.next_region_rect)
+        self.ekran.blit(ok, (W - 85, H // 2 - 14))
+        self.yazi("ESC menü", self.kucuk, BEYAZ, (W - 78, H - 36))
+
+    def level_etiket_ciz(self, level, ad, merkez, acik):
+        etiket = self.a.fixed("ui_label_bg.png", (148, 54))
+        r = etiket.get_rect(center=merkez)
+        self.ekran.blit(etiket, r)
+        renk = (42, 42, 52) if acik else (78, 78, 88)
+        self.yazi(f"Level {level}", self.kucuk, renk, (r.centerx, r.y + 19))
+        self.yazi(ad, self.mini, renk, (r.centerx, r.y + 35))
+        return r
 
     def gecis_ciz(self):
         self.level_menu_ciz()
