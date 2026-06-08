@@ -517,7 +517,7 @@ class Oyun:
         self.mode_back_rect = pygame.Rect(W // 2 - 105, 510, 210, 58)
         self.buton_resimli(self.hard_mode_rect, ("Main Menu", "btn_bg_red.png"), None, "Zorlayıcı Mod")
         self.buton_resimli(self.normal_mode_rect, ("Main Menu", "btn_bg_pink.png"), None, "Normal Mod")
-        self.rozet_yazi("Tek hata = Level 1", self.hard_mode_rect.move(0, 58).center, (255, 210, 220))
+        self.rozet_yazi("Ölünce başa döner", self.hard_mode_rect.move(0, 58).center, (255, 210, 220))
         self.rozet_yazi("Checkpoint açık", self.normal_mode_rect.move(0, 58).center, (220, 235, 255))
         self.buton_resimli(self.mode_back_rect, ("Main Menu", "btn_bg_gray.png"), None, "Geri")
 
@@ -637,14 +637,21 @@ class Oyun:
         self.buton_resimli(self.result_action, ("Levels", klasor, btn), None, yazi)
 
     def pause_ciz(self):
-        self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Settings", "ui_modal_bg.png")
-        r = modal.get_rect(center=(W // 2, H // 2))
-        self.ekran.blit(modal, r)
-        self.yazi("Duraklatıldı", self.buyuk, (115, 42, 145), (W // 2, r.y + 82))
-        self.pause_resume_rect = pygame.Rect(W // 2 - 120, r.y + 122, 240, 52)
-        self.pause_settings_rect = pygame.Rect(W // 2 - 120, r.y + 180, 240, 52)
-        self.pause_lobby_rect = pygame.Rect(W // 2 - 120, r.y + 238, 240, 52)
+        self.kutu((0, 0, W, H), 155)
+        panel = pygame.Rect(W // 2 - 270, H // 2 - 215, 540, 430)
+        kart = pygame.Surface(panel.size, pygame.SRCALPHA)
+        pygame.draw.rect(kart, (24, 17, 45, 238), kart.get_rect(), border_radius=28)
+        pygame.draw.rect(kart, (228, 74, 238, 255), kart.get_rect(), 4, border_radius=28)
+        pygame.draw.rect(kart, (70, 40, 105, 225), (28, 96, panel.w - 56, 78), border_radius=18)
+        pygame.draw.rect(kart, (128, 72, 164, 170), (28, 96, panel.w - 56, 78), 2, border_radius=18)
+        self.ekran.blit(kart, panel)
+        self.yazi("Duraklatıldı", self.buyuk, BEYAZ, (panel.centerx, panel.y + 58))
+        mod = "Zorlayıcı" if self.oyun_modu == "zor" else "Normal"
+        self.yazi(f"{mod} Mod - Seviye {self.level} - Skor {self.puan}", self.font,
+                  (238, 226, 250), (panel.centerx, panel.y + 124))
+        self.pause_resume_rect = pygame.Rect(panel.centerx - 135, panel.y + 190, 270, 58)
+        self.pause_settings_rect = pygame.Rect(panel.centerx - 135, panel.y + 264, 270, 58)
+        self.pause_lobby_rect = pygame.Rect(panel.centerx - 135, panel.y + 338, 270, 58)
         self.buton_resimli(self.pause_resume_rect, ("Main Menu", "btn_bg_pink.png"), None, "Devam Et")
         self.buton_resimli(self.pause_settings_rect, ("Main Menu", "btn_bg_gray.png"), None, "Ayarlar")
         self.buton_resimli(self.pause_lobby_rect, ("Main Menu", "btn_bg_red.png"), None, "Lobiye Dön")
