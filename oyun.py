@@ -47,8 +47,11 @@ class Oyun:
         self.level_puan_baslangic = 0
         self.rekor = 0
         self.ses_acik = True
+        self.efekt_acik = True
         self.muzik_ses = 0.70
         self.kazandi = False
+        self.ayarlar_donus = "menu"
+        self.pause_zamani = 0
         self.gecis_basla = 0
         self.gecis_level = 1
         self.gecis_puan = None
@@ -104,16 +107,30 @@ class Oyun:
 
     def kaybetme_sesi_cal(self):
         self.menu_muzigi_durdur()
-        if self.ses_acik and self.ses_hazir and self.game_over_sesi:
+        if self.efekt_acik and self.ses_hazir and self.game_over_sesi:
             self.game_over_sesi.play()
 
     def level_gecis_sesi_cal(self):
-        if self.ses_acik and self.ses_hazir and self.level_gecis_sesi:
+        if self.efekt_acik and self.ses_hazir and self.level_gecis_sesi:
             self.level_gecis_sesi.stop()
             self.level_gecis_sesi.set_volume(1)
             if self.menu_caliyor:
                 pygame.mixer.music.set_volume(self.muzik_ses * 0.35)
             self.level_gecis_sesi.play()
+
+    def pause_baslat(self):
+        if self.durum == "oyun":
+            self.pause_zamani = time.time()
+            self.durum = "pause"
+
+    def pause_bitir(self):
+        if self.pause_zamani:
+            gecen = time.time() - self.pause_zamani
+            self.baslama += gecen
+            if self.elma_yeri:
+                self.elma_zamani += gecen
+        self.pause_zamani = 0
+        self.durum = "oyun"
 
     def muzik_sesi_degistir(self, miktar):
         self.muzik_ses = max(0, min(1, round(self.muzik_ses + miktar, 2)))
@@ -281,18 +298,30 @@ class Oyun:
                 self.sonraki = yonler[tus]
                 return True
             if tus == pygame.K_ESCAPE:
-                self.durum = "level_menu"
-                self.menu_muzigi_baslat()
+                self.pause_baslat()
                 return True
             if tus == pygame.K_r:
                 self.level_baslat(self.level, self.level_puan_baslangic)
+                return True
+        if self.durum == "pause":
+            if tus in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE):
+                self.pause_bitir()
+                return True
+            if tus == pygame.K_a:
+                self.ayarlar_donus = "pause"
+                self.durum = "ayarlar"
+                return True
+            if tus == pygame.K_l:
+                self.durum = "level_menu"
+                self.menu_muzigi_baslat()
                 return True
         if self.durum in ("kazandin", "kaybettin") and tus in (pygame.K_RETURN, pygame.K_SPACE, pygame.K_r):
             self.sonuc_devam()
             return True
         if tus == pygame.K_ESCAPE and self.durum in ("ayarlar", "cikis"):
-            self.durum = "menu"
-            self.menu_muzigi_baslat()
+            self.durum = self.ayarlar_donus if self.durum == "ayarlar" else "menu"
+            if self.durum == "menu":
+                self.menu_muzigi_baslat()
             return True
         return False
 
@@ -302,6 +331,7 @@ class Oyun:
                 self.durum = "mod_menu"
                 self.menu_muzigi_baslat()
             elif self.settings_rect.collidepoint(pos):
+                self.ayarlar_donus = "menu"
                 self.durum = "ayarlar"
             elif self.exit_rect.collidepoint(pos):
                 self.durum = "cikis"
@@ -327,12 +357,20 @@ class Oyun:
                     self.gecis_baslat(level, puan)
                     return True
         if self.durum == "ayarlar":
-            if self.settings_save.collidepoint(pos):
+            if self.music_toggle.collidepoint(pos):
                 self.ses_acik = not self.ses_acik
                 if self.ses_acik:
                     self.menu_muzigi_baslat()
                 else:
                     self.menu_muzigi_durdur()
+                return True
+            if self.effects_toggle.collidepoint(pos):
+                self.efekt_acik = not self.efekt_acik
+                if not self.efekt_acik:
+                    if self.game_over_sesi:
+                        self.game_over_sesi.stop()
+                    if self.level_gecis_sesi:
+                        self.level_gecis_sesi.stop()
                 return True
             if self.volume_down.collidepoint(pos):
                 self.muzik_sesi_degistir(-0.10)
@@ -341,7 +379,20 @@ class Oyun:
                 self.muzik_sesi_degistir(0.10)
                 return True
             if self.settings_close.collidepoint(pos):
-                self.durum = "menu"
+                self.durum = self.ayarlar_donus
+                if self.durum == "menu":
+                    self.menu_muzigi_baslat()
+                return True
+        if self.durum == "pause":
+            if self.pause_resume_rect.collidepoint(pos):
+                self.pause_bitir()
+                return True
+            if self.pause_settings_rect.collidepoint(pos):
+                self.ayarlar_donus = "pause"
+                self.durum = "ayarlar"
+                return True
+            if self.pause_lobby_rect.collidepoint(pos):
+                self.durum = "level_menu"
                 self.menu_muzigi_baslat()
                 return True
         if self.durum == "cikis":
@@ -432,8 +483,14 @@ class Oyun:
             self.gecis_ciz()
         elif self.durum == "oyun":
             self.oyun_ciz()
+        elif self.durum == "pause":
+            self.oyun_ciz()
+            self.pause_ciz()
         elif self.durum == "ayarlar":
-            self.menu_ciz()
+            if self.ayarlar_donus == "pause":
+                self.oyun_ciz()
+            else:
+                self.menu_ciz()
             self.ayarlar_ciz()
         elif self.durum == "cikis":
             self.menu_ciz()
@@ -460,8 +517,8 @@ class Oyun:
         self.mode_back_rect = pygame.Rect(W // 2 - 105, 510, 210, 58)
         self.buton_resimli(self.hard_mode_rect, ("Main Menu", "btn_bg_red.png"), None, "Zorlayıcı Mod")
         self.buton_resimli(self.normal_mode_rect, ("Main Menu", "btn_bg_pink.png"), None, "Normal Mod")
-        self.yazi("Ölünce başa döner", self.kucuk, (230, 230, 240), self.hard_mode_rect.move(0, 55).center)
-        self.yazi("Checkpoint açık", self.kucuk, (230, 230, 240), self.normal_mode_rect.move(0, 55).center)
+        self.rozet_yazi("Tek hata = Level 1", self.hard_mode_rect.move(0, 58).center, (255, 210, 220))
+        self.rozet_yazi("Checkpoint açık", self.normal_mode_rect.move(0, 58).center, (220, 235, 255))
         self.buton_resimli(self.mode_back_rect, ("Main Menu", "btn_bg_gray.png"), None, "Geri")
 
     def level_menu_ciz(self):
@@ -536,7 +593,7 @@ class Oyun:
             self.ekran.blit(self.a.global_(ikon, (30, 30)), (x + 16, 58))
             self.yazi(metin, self.kucuk, BEYAZ, (x + 106, 73))
         self.ekran.blit(self.a.global_("ui_keycap_esc.png"), (ALAN.x + 375, ALAN.bottom + 15))
-        self.yazi("Menü", self.kucuk, BEYAZ, (ALAN.x + 455, ALAN.bottom + 31))
+        self.yazi("Pause", self.kucuk, BEYAZ, (ALAN.x + 455, ALAN.bottom + 31))
         self.ekran.blit(self.a.global_("ui_keycap_r.png"), (ALAN.x + 530, ALAN.bottom + 15))
         self.yazi("Yeniden", self.kucuk, BEYAZ, (ALAN.x + 610, ALAN.bottom + 31))
 
@@ -579,21 +636,37 @@ class Oyun:
         yazi = "Sonraki" if klasor == "Won" else "Tekrar"
         self.buton_resimli(self.result_action, ("Levels", klasor, btn), None, yazi)
 
+    def pause_ciz(self):
+        self.kutu((0, 0, W, H), 130)
+        modal = self.a.al("Settings", "ui_modal_bg.png")
+        r = modal.get_rect(center=(W // 2, H // 2))
+        self.ekran.blit(modal, r)
+        self.yazi("Duraklatıldı", self.buyuk, (115, 42, 145), (W // 2, r.y + 82))
+        self.pause_resume_rect = pygame.Rect(W // 2 - 120, r.y + 122, 240, 52)
+        self.pause_settings_rect = pygame.Rect(W // 2 - 120, r.y + 180, 240, 52)
+        self.pause_lobby_rect = pygame.Rect(W // 2 - 120, r.y + 238, 240, 52)
+        self.buton_resimli(self.pause_resume_rect, ("Main Menu", "btn_bg_pink.png"), None, "Devam Et")
+        self.buton_resimli(self.pause_settings_rect, ("Main Menu", "btn_bg_gray.png"), None, "Ayarlar")
+        self.buton_resimli(self.pause_lobby_rect, ("Main Menu", "btn_bg_red.png"), None, "Lobiye Dön")
+
     def ayarlar_ciz(self):
         self.kutu((0, 0, W, H), 130)
         modal = self.a.al("Settings", "ui_modal_bg.png")
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
-        self.yazi("Ayarlar", self.buyuk, (115, 42, 145), (W // 2, r.y + 92))
-        self.yazi(f"Ses: {'Açık' if self.ses_acik else 'Kapalı'}", self.font, (55, 55, 65), (W // 2, r.y + 145))
-        self.yazi(f"Müzik: %{int(self.muzik_ses * 100)}", self.font, (55, 55, 65), (W // 2, r.y + 195))
-        self.volume_down = pygame.Rect(W // 2 - 190, r.y + 168, 64, 54)
-        self.volume_up = pygame.Rect(W // 2 + 126, r.y + 168, 64, 54)
-        self.settings_save = pygame.Rect(W // 2 - 165, r.bottom - 76, 150, 58)
-        self.settings_close = pygame.Rect(W // 2 + 15, r.bottom - 76, 150, 58)
+        self.yazi("Ayarlar", self.buyuk, (115, 42, 145), (W // 2, r.y + 78))
+        self.music_toggle = pygame.Rect(W // 2 - 165, r.y + 115, 150, 50)
+        self.effects_toggle = pygame.Rect(W // 2 + 15, r.y + 115, 150, 50)
+        self.yazi(f"Müzik Sesi: %{int(self.muzik_ses * 100)}", self.font, (55, 55, 65), (W // 2, r.y + 198))
+        self.volume_down = pygame.Rect(W // 2 - 190, r.y + 172, 64, 54)
+        self.volume_up = pygame.Rect(W // 2 + 126, r.y + 172, 64, 54)
+        self.settings_close = pygame.Rect(W // 2 - 75, r.bottom - 64, 150, 54)
+        self.buton_resimli(self.music_toggle, ("Settings", "btn_bg_green.png" if self.ses_acik else "btn_bg_red.png"),
+                           None, f"Müzik {'Açık' if self.ses_acik else 'Kapalı'}")
+        self.buton_resimli(self.effects_toggle, ("Settings", "btn_bg_green.png" if self.efekt_acik else "btn_bg_red.png"),
+                           None, f"Efekt {'Açık' if self.efekt_acik else 'Kapalı'}")
         self.buton_resimli(self.volume_down, ("Settings", "btn_bg_red.png"), None, "-")
         self.buton_resimli(self.volume_up, ("Settings", "btn_bg_green.png"), None, "+")
-        self.buton_resimli(self.settings_save, ("Settings", "btn_bg_green.png"), None, "Değiştir")
         self.buton_resimli(self.settings_close, ("Settings", "btn_bg_red.png"), None, "Kapat")
 
     def cikis_ciz(self):
@@ -620,6 +693,13 @@ class Oyun:
         s = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA)
         s.fill((0, 0, 0, alpha))
         self.ekran.blit(s, rect[:2])
+
+    def rozet_yazi(self, metin, merkez, renk):
+        img = self.kucuk.render(metin, True, renk)
+        r = img.get_rect(center=merkez).inflate(24, 12)
+        pygame.draw.rect(self.ekran, (36, 28, 58), r, border_radius=12)
+        pygame.draw.rect(self.ekran, (125, 88, 160), r, 1, border_radius=12)
+        self.ekran.blit(img, img.get_rect(center=merkez))
 
     def yazi(self, metin, font, renk, merkez):
         img = font.render(metin, True, renk)

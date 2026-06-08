@@ -9,7 +9,12 @@ py main.py
 Kontroller:
 W A S D veya ok tuslari: yon degistir
 R: leveli yeniden baslat
-ESC: level menuye don
+ESC: oyunu duraklat
+
+Pause menusu:
+Devam Et: oyuna geri don
+Ayarlar: muzik ve efekt ayarlarini ac
+Lobiye Don: level menusu ekranina don
 
 Level menu:
 Sag ok tusu veya ekrandaki ok: sonraki bolge

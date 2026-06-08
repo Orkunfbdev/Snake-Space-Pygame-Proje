@@ -16,7 +16,7 @@ assetler.py
 
 oyun.py
 - Ana oyun sinifi buradadir.
-- Durum sistemi kullanilir: menu, mod_menu, ayarlar, cikis, level_menu, gecis, oyun, kazandin, kaybettin.
+- Durum sistemi kullanilir: menu, mod_menu, ayarlar, cikis, level_menu, gecis, oyun, pause, kazandin, kaybettin.
 - Oyuna baslarken normal mod veya zorlayici mod secilir.
 - Normal modda level baslangic puani checkpoint olarak tutulur; kaybedince ayni level bu puanla tekrar baslar.
 - Zorlayici modda oyun daha hizli ve daha engellidir; kaybedince puan ve acilan leveller sifirlanir.
@@ -26,6 +26,8 @@ oyun.py
 - Yilan kare sprite olarak degil, kalin yuvarlak pygame cizgileriyle tek parca gibi cizilir.
 - Menu muzigi ana ekranda surekli calar; oyun baslayinca 10 saniye sonra durur.
 - Oyun basladiktan sonra menu muzigi bir anda kesilmez, 2 saniyede yavasca kisilir.
+- ESC oyun icinde pause ekranini acar; pause suresi skor zamanindan sayilmaz.
+- Ayarlar ekraninda muzik ve efektler ayri acilip kapatilabilir.
 - Ayarlar ekranindaki - ve + tuslari menu muziginin ses seviyesini degistirir.
 - Level gecis animasyonu baslarken gecis sesi bir kez calar; animasyon suresi bu sese gore ayarlanir.
 - Kaybedince game over sesi bir kez calar.
