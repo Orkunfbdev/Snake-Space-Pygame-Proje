@@ -55,6 +55,7 @@ class Oyun:
         self.puan = 0
         self.level_puan_baslangic = 0
         self.rekor = 0
+        self.sonuc_suresi = 0
         self.ses_acik = True
         self.efekt_acik = True
         self.muzik_ses = 0.70
@@ -154,6 +155,7 @@ class Oyun:
         self.kapi_yeri = (SUTUN - 3, SATIR - 3)
         self.son_hareket = pygame.time.get_ticks()
         self.baslama = time.time()
+        self.sonuc_suresi = 0
         self.engeller = self.engel_uret()
         self.elma_yeri = None
         self.elma_uret()
@@ -456,6 +458,7 @@ class Oyun:
         if self.carpti(bas):
             self.rekor = max(self.rekor, self.puan)
             self.kazandi = False
+            self.sonuc_suresi = time.time() - self.baslama
             self.kaybetme_sesi_cal()
             self.durum = "kaybettin"
             return True
@@ -468,6 +471,7 @@ class Oyun:
             self.acik_level = min(SON_LEVEL, max(self.acik_level, self.level + 1))
             self.rekor = max(self.rekor, self.puan)
             self.kazandi = True
+            self.sonuc_suresi = time.time() - self.baslama
             self.durum = "kazandin"
         return True
 
@@ -598,7 +602,9 @@ class Oyun:
         self.ekran.blit(self.a.level(self.level, "bg_world.png", (W, H)), (0, 0))
         self.hud_ciz()
         self.ekran.blit(self.tahta, ALAN)
-        pygame.draw.rect(self.ekran, (20, 20, 25), ALAN, 3)
+        kenar = pygame.Surface(ALAN.size, pygame.SRCALPHA)
+        pygame.draw.rect(kenar, (0, 0, 0, 85), kenar.get_rect(), 3)
+        self.ekran.blit(kenar, ALAN.topleft)
         duvar = self.a.level(self.level, "wall_block.png", (KARE, KARE))
         for e in self.engeller:
             self.ekran.blit(duvar, self.kare(e))
@@ -616,8 +622,9 @@ class Oyun:
         seviye_yazi = f"Seviye {self.level}"
         if self.oyun_modu == "zor":
             seviye_yazi += " Zor"
+        oyun_suresi = self.sonuc_suresi if self.durum in ("kazandin", "kaybettin") and self.sonuc_suresi else time.time() - self.baslama
         bilgiler = [("icon_ranking.png", seviye_yazi), ("icon_star.png", str(self.puan)),
-                    ("icon_clock.png", sure_yaz(time.time() - self.baslama)),
+                    ("icon_clock.png", sure_yaz(oyun_suresi)),
                     ("icon_apple.png", f"{self.toplanan}/{self.hedef()}")]
         for i, (ikon, metin) in enumerate(bilgiler):
             x = 260 + i * 210
@@ -655,19 +662,40 @@ class Oyun:
 
     def sonuc_ciz(self):
         klasor = "Won" if self.durum == "kazandin" else "Lost"
-        self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Levels", klasor, "ui_modal_bg_green.png" if klasor == "Won" else "ui_modal_bg_red.png")
-        r = modal.get_rect(center=(W // 2, H // 2))
+        self.kutu((0, 0, W, H), 45)
+        modal_adi = "ui_modal_bg_green.png" if klasor == "Won" else "ui_modal_bg_red.png"
+        modal = self.a.al("Levels", klasor, modal_adi, boyut=(430, 400))
+        r = modal.get_rect(center=(W // 2, ALAN.y + 200))
         self.ekran.blit(modal, r)
-        baslik_renk = (32, 115, 72) if klasor == "Won" else (165, 34, 54)
-        self.yazi("Kazandın" if klasor == "Won" else "Kaybettin", self.buyuk, baslik_renk, (W // 2, r.y + 115))
-        self.yazi(f"Skor: {self.puan}", self.font, (45, 45, 55), (W // 2, r.y + 178))
-        self.result_main = pygame.Rect(W // 2 - 210, r.bottom - 92, 198, 64)
-        self.result_action = pygame.Rect(W // 2 + 18, r.bottom - 92, 198, 64)
-        self.buton_resimli(self.result_main, ("Levels", klasor, "btn_bg_gray.png"), None, "Level Menü")
+        baslik = "KAZANDIN" if klasor == "Won" else "KAYBETTİN"
+        self.yazi(baslik, self.font, BEYAZ, (r.centerx, r.y + 30))
+        yildiz = "icon_star_green.png" if klasor == "Won" else "icon_star_gray.png"
+        self.ekran.blit(self.a.al("Levels", klasor, yildiz, boyut=(110, 40)),
+                        (r.centerx - 55, r.y + 105))
+        self.yazi(f"{self.puan} Puan", self.font, (45, 48, 55), (r.centerx, r.y + 163))
+        sure = self.sonuc_suresi if self.sonuc_suresi else time.time() - self.baslama
+        self.sonuc_stat_ciz(klasor, pygame.Rect(r.centerx - 142, r.y + 210, 128, 50),
+                            "icon_clock.png", "Geçen Süre", sure_yaz(sure))
+        self.sonuc_stat_ciz(klasor, pygame.Rect(r.centerx + 14, r.y + 210, 128, 50),
+                            "icon_apple.png", "Meyve Sayısı", f"{self.toplanan}/{self.hedef()}")
+        self.result_main = pygame.Rect(r.centerx - 144, r.y + 296, 132, 43)
+        self.result_action = pygame.Rect(r.centerx + 12, r.y + 296, 132, 43)
+        self.sonuc_buton_ciz(klasor, self.result_main, "btn_bg_gray.png", "btn_bg_dark_gray.png", "Ana Menü")
         btn = "btn_bg_pink.png" if klasor == "Won" else "btn_bg_red.png"
-        yazi = "Sonraki" if klasor == "Won" else "Tekrar"
-        self.buton_resimli(self.result_action, ("Levels", klasor, btn), None, yazi)
+        ikon = "icon_arrow_right_white.png" if klasor == "Won" else "icon_retry_white.png"
+        yazi = "Devam Et" if klasor == "Won" else "Tekrar"
+        self.sonuc_buton_ciz(klasor, self.result_action, btn, ikon, yazi)
+
+    def sonuc_stat_ciz(self, klasor, rect, ikon, baslik, deger):
+        self.ekran.blit(self.a.al("Levels", klasor, "ui_panel_stats_light.png", boyut=rect.size), rect)
+        self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(24, 24)), (rect.x + 12, rect.y + 13))
+        self.yazi(baslik, self.mini, (78, 83, 91), (rect.x + 78, rect.y + 17))
+        self.yazi(deger, self.kucuk, (45, 48, 55), (rect.x + 78, rect.y + 33))
+
+    def sonuc_buton_ciz(self, klasor, rect, bg, ikon, metin):
+        self.ekran.blit(self.a.al("Levels", klasor, bg, boyut=rect.size), rect)
+        self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(22, 22)), (rect.x + 12, rect.y + 10))
+        self.yazi(metin, self.kucuk, BEYAZ, (rect.centerx + 13, rect.centery))
 
     def pause_ciz(self):
         self.kutu((0, 0, W, H), 155)
