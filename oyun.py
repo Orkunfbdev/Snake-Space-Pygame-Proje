@@ -18,6 +18,7 @@ BOLGELER = {
 
 class Oyun:
     def __init__(self):
+        pygame.mixer.pre_init(44100, -16, 2, 256)
         pygame.init()
         pygame.display.set_caption("Snake Space")
         pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN])
@@ -29,10 +30,14 @@ class Oyun:
         self.buyuk = pygame.font.SysFont("arial", 42, bold=True)
         self.menu_muzik = GUI / "Audio" / "game_menu.mp3"
         self.game_over_muzik = GUI / "Audio" / "game_over.wav"
+        self.level_gecis_muzik = GUI / "Audio" / "level_gecis.wav"
         self.game_over_sesi = None
+        self.level_gecis_sesi = None
+        self.gecis_suresi = 2200
         self.ses_hazir = False
         self.menu_caliyor = False
         self.menu_durus_zamani = 0
+        self.menu_fade_suresi = 2000
         self.durum = "menu"
         self.region = 1
         self.level = 1
@@ -53,6 +58,8 @@ class Oyun:
         try:
             pygame.mixer.init()
             self.game_over_sesi = pygame.mixer.Sound(str(self.game_over_muzik))
+            self.level_gecis_sesi = pygame.mixer.Sound(str(self.level_gecis_muzik))
+            self.gecis_suresi = max(1500, min(2300, int(self.level_gecis_sesi.get_length() * 1000)))
             self.ses_hazir = True
         except (pygame.error, OSError):
             self.ses_hazir = False
@@ -87,12 +94,23 @@ class Oyun:
 
     def sesleri_guncelle(self):
         if self.menu_durus_zamani and pygame.time.get_ticks() >= self.menu_durus_zamani:
-            self.menu_muzigi_durdur()
+            if self.ses_hazir:
+                pygame.mixer.music.fadeout(self.menu_fade_suresi)
+            self.menu_caliyor = False
+            self.menu_durus_zamani = 0
 
     def kaybetme_sesi_cal(self):
         self.menu_muzigi_durdur()
         if self.ses_acik and self.ses_hazir and self.game_over_sesi:
             self.game_over_sesi.play()
+
+    def level_gecis_sesi_cal(self):
+        if self.ses_acik and self.ses_hazir and self.level_gecis_sesi:
+            self.level_gecis_sesi.stop()
+            self.level_gecis_sesi.set_volume(1)
+            if self.menu_caliyor:
+                pygame.mixer.music.set_volume(self.muzik_ses * 0.35)
+            self.level_gecis_sesi.play()
 
     def muzik_sesi_degistir(self, miktar):
         self.muzik_ses = max(0, min(1, round(self.muzik_ses + miktar, 2)))
@@ -164,12 +182,17 @@ class Oyun:
     def gecis_baslat(self, level):
         self.gecis_level = level
         self.region = self.bolge_no(level)
+        self.level_gecis_sesi_cal()
         self.gecis_basla = pygame.time.get_ticks()
         self.durum = "gecis"
 
     def level_baslat(self, level):
         if self.game_over_sesi:
             self.game_over_sesi.stop()
+        if self.level_gecis_sesi:
+            self.level_gecis_sesi.stop()
+        if self.ses_hazir and self.menu_caliyor:
+            pygame.mixer.music.set_volume(self.muzik_ses)
         self.level = level
         self.puan = 0 if level == 1 else self.puan
         self.level_kur()
@@ -294,7 +317,7 @@ class Oyun:
     def guncelle(self):
         self.sesleri_guncelle()
         if self.durum == "gecis":
-            if pygame.time.get_ticks() - self.gecis_basla > 1150:
+            if pygame.time.get_ticks() - self.gecis_basla > self.gecis_suresi:
                 self.level_baslat(self.gecis_level)
                 return True
             return True
@@ -395,7 +418,7 @@ class Oyun:
 
     def gecis_ciz(self):
         self.level_menu_ciz()
-        t = min(1, (pygame.time.get_ticks() - self.gecis_basla) / 1150)
+        t = min(1, (pygame.time.get_ticks() - self.gecis_basla) / self.gecis_suresi)
         self.kutu((0, 0, W, H), int(170 * t))
         boy = int(120 + 210 * math.sin(t * math.pi / 2))
         gezegen = self.a.al(*self.gezegen_yolu(self.gecis_level), boyut=(boy, boy))

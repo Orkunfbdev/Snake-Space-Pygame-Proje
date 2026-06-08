@@ -22,7 +22,9 @@ oyun.py
 - Oyun ekraninda her level kendi bg_world, checkers, item_fruit, fx_portal ve wall_block gorsellerini kullanir.
 - Yilan kare sprite olarak degil, kalin yuvarlak pygame cizgileriyle tek parca gibi cizilir.
 - Menu muzigi ana ekranda surekli calar; oyun baslayinca 10 saniye sonra durur.
+- Oyun basladiktan sonra menu muzigi bir anda kesilmez, 2 saniyede yavasca kisilir.
 - Ayarlar ekranindaki - ve + tuslari menu muziginin ses seviyesini degistirir.
+- Level gecis animasyonu baslarken gecis sesi bir kez calar; animasyon suresi bu sese gore ayarlanir.
 - Kaybedince game over sesi bir kez calar.
 - Elma toplandikca puan sureye gore hesaplanir.
 - Level hedefindeki meyveler bitince portal acilir.
