@@ -197,10 +197,10 @@ class Oyun:
         return 3 if self.level == 1 else 5 + (self.level - 2) * 3
 
     def hiz(self):
-        taban = 112 - self.level * 4
+        taban = 142 - (self.level - 1) * 2
         if self.oyun_modu == "zor":
-            taban -= 14
-        return max(42, taban)
+            taban -= 10
+        return max(90, taban)
 
     def engel_uret(self):
         rnd = random.Random(self.level * 77)
