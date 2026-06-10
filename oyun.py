@@ -767,8 +767,8 @@ class Oyun:
 
     def yilan_ciz(self):
         noktalar = [self.kare(p).center for p in self.yilan]
-        govde, golge = (188, 72, 224), (115, 35, 145)
-        kalinlik = KARE - 4
+        govde, golge = (190, 82, 230), (110, 38, 140)
+        kalinlik = KARE - 5
         for renk, kayma in ((golge, (3, 4)), (govde, (0, 0))):
             ciz = [(x + kayma[0], y + kayma[1]) for x, y in noktalar]
             for a, b in zip(ciz, ciz[1:]):
@@ -779,14 +779,28 @@ class Oyun:
         dx, dy = self.yon
         px, py = -dy, dx
         hx, hy = noktalar[0]
-        goz = (hx + dx * 7 + px * 7, hy + dy * 7 + py * 7)
-        pygame.draw.circle(self.ekran, (25, 25, 28), goz, 7)
-        pygame.draw.circle(self.ekran, (245, 245, 245), (goz[0] - px * 2 - dx * 2, goz[1] - py * 2 - dy * 2), 2)
-        dil_bas = (hx + dx * (KARE // 2 - 1), hy + dy * (KARE // 2 - 1))
-        dil_uc = (hx + dx * (KARE // 2 + 13), hy + dy * (KARE // 2 + 13))
-        pygame.draw.line(self.ekran, (238, 70, 72), dil_bas, dil_uc, 4)
-        pygame.draw.line(self.ekran, (238, 70, 72), dil_uc, (dil_uc[0] + px * 6 - dx * 4, dil_uc[1] + py * 6 - dy * 4), 3)
-        pygame.draw.line(self.ekran, (238, 70, 72), dil_uc, (dil_uc[0] - px * 6 - dx * 4, dil_uc[1] - py * 6 - dy * 4), 3)
+        bas = (hx + dx * 2, hy + dy * 2)
+        pygame.draw.circle(self.ekran, govde, bas, kalinlik // 2)
+
+        goz = (int(hx + dx * 7), int(hy + dy * 7))
+        if dx:
+            goz_dis = pygame.Rect(goz[0] - 5, goz[1] - 7, 11, 14)
+            goz_ic = pygame.Rect(goz[0] - 3, goz[1] - 5, 7, 10)
+        else:
+            goz_dis = pygame.Rect(goz[0] - 7, goz[1] - 5, 14, 11)
+            goz_ic = pygame.Rect(goz[0] - 5, goz[1] - 3, 10, 7)
+        pygame.draw.ellipse(self.ekran, (98, 38, 122), goz_dis)
+        pygame.draw.ellipse(self.ekran, (25, 58, 34), goz_ic)
+        pygame.draw.circle(self.ekran, (245, 245, 245),
+                           (int(goz[0] - dx * 2 - px), int(goz[1] - dy * 2 - py)), 2)
+
+        dil_bas = (hx + dx * (KARE // 2 - 3), hy + dy * (KARE // 2 - 3))
+        dil_uc = (hx + dx * (KARE // 2 + 12), hy + dy * (KARE // 2 + 12))
+        pygame.draw.line(self.ekran, (242, 72, 78), dil_bas, dil_uc, 3)
+        pygame.draw.line(self.ekran, (242, 72, 78), dil_uc,
+                         (dil_uc[0] + px * 5 - dx * 4, dil_uc[1] + py * 5 - dy * 4), 2)
+        pygame.draw.line(self.ekran, (242, 72, 78), dil_uc,
+                         (dil_uc[0] - px * 5 - dx * 4, dil_uc[1] - py * 5 - dy * 4), 2)
 
     def sonuc_ciz(self):
         klasor = "Won" if self.durum == "kazandin" else "Lost"
