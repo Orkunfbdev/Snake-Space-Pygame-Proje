@@ -890,14 +890,14 @@ class Oyun:
 
     def pause_ciz(self):
         self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(1120, 480))
+        modal = self.a.al("Pause", "ui_modal_bg.png", boyut=(620, 720))
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
 
-        self.yazi("DURAKLATILDI", self.menu_buton_font, BEYAZ,
+        self.yazi("DURAKLATILDI", self.sonuc_baslik_font, BEYAZ,
                   (r.centerx, r.y + 55))
 
-        self.pause_close_rect = pygame.Rect(r.right - 78, r.y + 20, 54, 54)
+        self.pause_close_rect = pygame.Rect(r.right - 66, r.y + 18, 48, 48)
         close_rect = self.pause_close_rect.copy()
         if close_rect.collidepoint(pygame.mouse.get_pos()):
             close_rect = close_rect.inflate(6, 6)
@@ -907,23 +907,31 @@ class Oyun:
         )
         self.yazi("X", self.buton_font, BEYAZ, close_rect.center)
 
-        mod = "Zorlayıcı Mod" if self.oyun_modu == "zor" else "Normal Mod"
-        bilgi = f"Oyun Modu: {mod}   |   Seviye: {self.level}   |   Skor: {self.puan}"
-        self.yazi(bilgi, self.ayarlar_label_font, (64, 66, 74),
-                  (r.centerx, r.y + 180))
+        self.ekran.blit(
+            self.a.al("Levels", "Won", "icon_star_green.png", boyut=(165, 60)),
+            (r.centerx - 82, r.y + 120)
+        )
+        self.yazi(f"{self.puan} Puan", self.sonuc_skor_font, (45, 48, 55),
+                  (r.centerx, r.y + 210))
 
-        buton_y = r.y + 292
-        buton_araligi = 24
-        devam_w, ayarlar_w, lobi_w = 300, 320, 360
-        toplam_w = devam_w + ayarlar_w + lobi_w + buton_araligi * 2
-        bas_x = r.centerx - toplam_w // 2
-        self.pause_resume_rect = pygame.Rect(bas_x, buton_y, devam_w, 82)
-        self.pause_settings_rect = pygame.Rect(
-            self.pause_resume_rect.right + buton_araligi, buton_y, ayarlar_w, 82
+        sure = (self.pause_zamani or time.time()) - self.baslama
+        self.sonuc_stat_ciz(
+            "Won", pygame.Rect(r.x + 82, r.y + 258, 220, 86),
+            "icon_clock.png", "Geçen Süre", sure_yaz(sure)
         )
-        self.pause_lobby_rect = pygame.Rect(
-            self.pause_settings_rect.right + buton_araligi, buton_y, lobi_w, 82
+        self.sonuc_stat_ciz(
+            "Won", pygame.Rect(r.x + 318, r.y + 258, 220, 86),
+            "icon_apple.png", "Meyve Sayısı", f"{self.toplanan}/{self.hedef()}"
         )
+
+        mod = "Zorlayıcı Mod" if self.oyun_modu == "zor" else "Normal Mod"
+        self.yazi(f"{mod}  |  Seviye {self.level}", self.kucuk, (78, 83, 91),
+                  (r.centerx, r.y + 375))
+
+        buton_x = r.centerx - 220
+        self.pause_resume_rect = pygame.Rect(buton_x, r.y + 405, 440, 72)
+        self.pause_settings_rect = pygame.Rect(buton_x, r.y + 490, 440, 72)
+        self.pause_lobby_rect = pygame.Rect(buton_x, r.y + 575, 440, 72)
         self.pause_buton_ciz(
             self.pause_resume_rect, "btn_bg_pink.png", "icon_play.png", "DEVAM ET"
         )
