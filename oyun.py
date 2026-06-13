@@ -29,7 +29,7 @@ class Oyun:
         pygame.mixer.pre_init(44100, -16, 2, 256)
         pygame.init()
         pygame.display.set_caption("Snake Space")
-        pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN])
+        pygame.event.set_allowed([pygame.QUIT, pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN, pygame.MOUSEMOTION])
         self.ekran = pygame.display.set_mode((W, H), pygame.DOUBLEBUF)
         self.saat = pygame.time.Clock()
         self.a = Assetler()
@@ -78,19 +78,31 @@ class Oyun:
         digital = font_klasor / "Digitalt.ttf"
         self.font = self.font_yukle(rubik, 22)
         self.kucuk = self.font_yukle(rubik, 16)
-        self.mini = self.font_yukle(rubik, 11)
-        self.level_ad_font = self.font_yukle(rubik, 13)
+        self.mini = self.font_yukle(rubik, 12)
+        self.level_ad_font = self.font_yukle(rubik, 14)
         self.bolge_font = self.font_yukle(rubik, 22)
         self.yardim_font = self.font_yukle(rubik, 12)
         self.buyuk = self.font_yukle(digital, 42, "arialblack", True)
         self.baslik_font = self.font_yukle(digital, 24, "arialblack", True)
-        self.menu_buton_font = self.font_yukle(digital, 38, "arialblack")
+        self.menu_buton_font = self.font_yukle(digital, 46, "arialblack")
         self.mode_buton_font = self.font_yukle(digital, 32, "arialblack", True)
         self.mode_rozet_font = self.font_yukle(rubik, 15)
         self.buton_font = self.font_yukle(digital, 20, "arialblack", True)
         self.buton_kucuk = self.font_yukle(digital, 13, "arialblack", True)
         self.level_baslik_font = self.font_yukle(digital, 23, "arialblack", True)
-        self.dijital_mini = self.font_yukle(digital, 12, "arialblack", True)
+        self.dijital_mini = self.font_yukle(digital, 13, "arialblack", True)
+        self.ayarlar_baslik_font = self.font_yukle(digital, 34, "arialblack")
+        self.ayarlar_label_font = self.font_yukle(rubik, 26)
+        self.ayarlar_buton_font = self.font_yukle(digital, 28, "arialblack", True)
+        self.mode_popup_title_font = self.font_yukle(digital, 38, "arialblack")
+        self.mode_popup_buton_font = self.font_yukle(digital, 26, "arialblack", True)
+        self.mode_popup_label_font = self.font_yukle(rubik, 18)
+        self.hud_label_font = self.font_yukle(rubik, 13)
+        self.hud_value_font = self.font_yukle(rubik, 20)
+        self.sonuc_baslik_font = self.font_yukle(digital, 36, "arialblack")
+        self.sonuc_skor_font = self.font_yukle(rubik, 36)
+        self.sonuc_buton_font = self.font_yukle(digital, 22, "arialblack")
+        self.sonuc_stat_val_font = self.font_yukle(rubik, 24)
 
     def sesleri_hazirla(self):
         try:
@@ -190,7 +202,6 @@ class Oyun:
         for y in range(SATIR):
             for x in range(SUTUN):
                 s.blit(acik if (x + y) % 2 == 0 else koyu, (x * KARE, y * KARE))
-        s.set_alpha(225)
         return s
 
     def hedef(self):
@@ -304,6 +315,9 @@ class Oyun:
                 degisti = self.tus(e.key) or degisti
             if e.type == pygame.MOUSEBUTTONDOWN and e.button == 1:
                 degisti = self.tikla(e.pos) or degisti
+            if e.type == pygame.MOUSEMOTION:
+                if self.durum in ("menu", "mod_menu", "level_menu", "ayarlar", "pause", "cikis", "kazandin", "kaybettin"):
+                    degisti = True
         return degisti
 
     def tus(self, tus):
@@ -391,7 +405,7 @@ class Oyun:
             if self.normal_mode_rect.collidepoint(pos):
                 self.mod_baslat("normal")
                 return True
-            if self.mode_back_rect.collidepoint(pos):
+            if self.mode_close.collidepoint(pos):
                 self.durum = "menu"
                 self.menu_muzigi_baslat()
                 return True
@@ -422,12 +436,6 @@ class Oyun:
                         self.game_over_sesi.stop()
                     if self.level_gecis_sesi:
                         self.level_gecis_sesi.stop()
-                return True
-            if self.volume_down.collidepoint(pos):
-                self.muzik_sesi_degistir(-0.10)
-                return True
-            if self.volume_up.collidepoint(pos):
-                self.muzik_sesi_degistir(0.10)
                 return True
             if self.settings_close.collidepoint(pos):
                 self.durum = self.ayarlar_donus
@@ -571,22 +579,32 @@ class Oyun:
         self.ana_menu_buton_ciz(self.exit_rect, "btn_bg_red.png", "icon_exit.png", "ÇIKIŞ")
 
     def mod_menu_ciz(self):
-        self.ekran.blit(self.a.al("Main Menu", "bg_main_menu.png", boyut=(W, H)), (0, 0))
-        self.kutu((0, 0, W, H), 120)
-        self.yazi("Oyun Modu", self.buyuk, BEYAZ, (W // 2, 145))
-        buton_w, buton_h, aralik = 360, 86, 70
-        toplam = buton_w * 2 + aralik
-        sol = W // 2 - toplam // 2
-        self.hard_mode_rect = pygame.Rect(sol, 275, buton_w, buton_h)
-        self.normal_mode_rect = pygame.Rect(sol + buton_w + aralik, 275, buton_w, buton_h)
-        self.mode_back_rect = pygame.Rect(W // 2 - 145, 540, 290, 76)
-        self.mod_buton_ciz(self.hard_mode_rect, "btn_bg_red.png", "Zorlayıcı Mod")
-        self.mod_buton_ciz(self.normal_mode_rect, "btn_bg_pink.png", "Normal Mod")
-        self.mod_rozet_ciz("Ölünce başa döner",
-                           pygame.Rect(self.hard_mode_rect.centerx - 125, self.hard_mode_rect.bottom + 20, 250, 42))
-        self.mod_rozet_ciz("Checkpoint açık",
-                           pygame.Rect(self.normal_mode_rect.centerx - 110, self.normal_mode_rect.bottom + 20, 220, 42))
-        self.mod_buton_ciz(self.mode_back_rect, "btn_bg_gray.png", "Geri")
+        self.menu_ciz()
+        self.kutu((0, 0, W, H), 130)
+        
+        modal = self.a.al("Level Mod Menu", "ui_modal_bg.png", boyut=(630, 270))
+        r = modal.get_rect(center=(W // 2, H // 2))
+        self.ekran.blit(modal, r)
+        
+        self.yazi("OYUN MODU", self.mode_popup_title_font, BEYAZ, (r.centerx, r.y + 35))
+        
+        self.mode_close = pygame.Rect(r.right - 58, r.y + 12, 42, 42)
+        pos = pygame.mouse.get_pos()
+        close_hover = self.mode_close.collidepoint(pos)
+        close_rect = self.mode_close.copy()
+        if close_hover:
+            close_rect = close_rect.inflate(6, 6)
+        self.ekran.blit(self.a.al("Settings", "btn_bg_red_round.png", boyut=close_rect.size), close_rect)
+        self.yazi("X", self.buton_font, BEYAZ, close_rect.center)
+        
+        self.hard_mode_rect = pygame.Rect(r.centerx - 225, r.y + 110, 210, 68)
+        self.normal_mode_rect = pygame.Rect(r.centerx + 15, r.y + 110, 210, 68)
+        
+        self.mod_buton_ciz(self.hard_mode_rect, "btn_bg_red.png", "ZORLAYIIC MOD", self.mode_popup_buton_font)
+        self.mod_buton_ciz(self.normal_mode_rect, "btn_bg_gray.png", "NORMAL MOD", self.mode_popup_buton_font)
+        
+        self.yazi("Ölünce Başa Döner", self.mode_popup_label_font, (64, 66, 74), (self.hard_mode_rect.centerx, r.y + 207))
+        self.yazi("Checkpoint Açık", self.mode_popup_label_font, (64, 66, 74), (self.normal_mode_rect.centerx, r.y + 207))
 
     def level_menu_ciz(self):
         self.ekran.fill((0, 0, 0))
@@ -597,7 +615,7 @@ class Oyun:
         self.level_yolu_ciz(basla)
         self.level_rects = []
         konumlar = [(195, 232), (486, 535), (808, 232), (1067, 595)]
-        etiketler = [(195, 78), (486, 353), (808, 78), (1067, 403)]
+        etiketler = [(195, 80), (486, 375), (808, 80), (1067, 450)]
         boylar = [230, 245, 230, 215]
         for i in range(4):
             level = basla + i
@@ -730,8 +748,8 @@ class Oyun:
         self.yilan_ciz()
 
     def hud_ciz(self):
-        logo = self.a.global_("logo_main.png", (155, 68))
-        self.ekran.blit(logo, (60, 34))
+        logo = self.a.global_("logo_main.png", (185, 82))
+        self.ekran.blit(logo, (54, 54))
         seviye_yazi = f"Seviye {self.level}"
         if self.oyun_modu == "zor":
             seviye_yazi += " Zor"
@@ -740,12 +758,12 @@ class Oyun:
                     ("icon_clock.png", "Geçen Süre", sure_yaz(oyun_suresi)),
                     ("icon_apple.png", "Meyve Sayısı", f"{self.toplanan}/{self.hedef()}")]
         for i, (ikon, baslik, metin) in enumerate(bilgiler):
-            x = 260 + i * 210
-            panel = self.a.global_("ui_hud_panel.png", (190, 56))
-            self.ekran.blit(panel, (x, 45))
-            self.ekran.blit(self.a.global_(ikon, (30, 30)), (x + 16, 58))
-            self.yazi(baslik, self.mini, BEYAZ, (x + 106, 62))
-            self.yazi(metin, self.kucuk, BEYAZ, (x + 106, 78))
+            x = int(338 + i * 225.56)
+            panel = self.a.global_("ui_hud_panel.png", (215, 77))
+            self.ekran.blit(panel, (x, 56))
+            self.ekran.blit(self.a.global_(ikon, (30, 30)), (x + 16, 79))
+            self.yazi_sol(baslik, self.hud_label_font, BEYAZ, (x + 54, 80))
+            self.yazi_sol(metin, self.hud_value_font, BEYAZ, (x + 54, 103))
         self.yardim_ciz()
 
     def yardim_ciz(self):
@@ -766,62 +784,73 @@ class Oyun:
         self.ekran.blit(yazi2, yazi2.get_rect(midleft=(x, orta)))
 
     def yilan_ciz(self):
-        noktalar = [self.kare(p).center for p in self.yilan]
-        govde, golge = (190, 82, 230), (110, 38, 140)
-        kalinlik = KARE - 5
-        for renk, kayma in ((golge, (3, 4)), (govde, (0, 0))):
-            ciz = [(x + kayma[0], y + kayma[1]) for x, y in noktalar]
-            for a, b in zip(ciz, ciz[1:]):
-                pygame.draw.line(self.ekran, renk, a, b, kalinlik)
-            for p in ciz:
-                pygame.draw.circle(self.ekran, renk, p, kalinlik // 2)
+        if len(self.yilan) < 2:
+            return
 
-        dx, dy = self.yon
-        px, py = -dy, dx
-        hx, hy = noktalar[0]
-        bas = (hx + dx * 2, hy + dy * 2)
-        pygame.draw.circle(self.ekran, govde, bas, kalinlik // 2)
+        head_img = self.a.global_("snake_head.png", (KARE, KARE))
+        body_img = self.a.global_("snake_body_straight.png", (KARE, KARE))
+        turn_img = self.a.global_("snake_body_turn.png", (KARE, KARE))
+        tail_img = self.a.global_("snake_tail.png", (KARE, KARE))
 
-        goz = (int(hx + dx * 7), int(hy + dy * 7))
-        if dx:
-            goz_dis = pygame.Rect(goz[0] - 5, goz[1] - 7, 11, 14)
-            goz_ic = pygame.Rect(goz[0] - 3, goz[1] - 5, 7, 10)
-        else:
-            goz_dis = pygame.Rect(goz[0] - 7, goz[1] - 5, 14, 11)
-            goz_ic = pygame.Rect(goz[0] - 5, goz[1] - 3, 10, 7)
-        pygame.draw.ellipse(self.ekran, (98, 38, 122), goz_dis)
-        pygame.draw.ellipse(self.ekran, (25, 58, 34), goz_ic)
-        pygame.draw.circle(self.ekran, (245, 245, 245),
-                           (int(goz[0] - dx * 2 - px), int(goz[1] - dy * 2 - py)), 2)
+        # Pre-pass: draw connecting lines between segment centers to fill junction gaps
+        SNAKE_COL = (181, 73, 228)
+        arm_w = int(KARE * 0.55)  # matches sprite arm thickness
+        centers = [self.kare(p).center for p in self.yilan]
+        for a, b in zip(centers, centers[1:]):
+            pygame.draw.line(self.ekran, SNAKE_COL, a, b, arm_w)
 
-        dil_bas = (hx + dx * (KARE // 2 - 3), hy + dy * (KARE // 2 - 3))
-        dil_uc = (hx + dx * (KARE // 2 + 12), hy + dy * (KARE // 2 + 12))
-        pygame.draw.line(self.ekran, (242, 72, 78), dil_bas, dil_uc, 3)
-        pygame.draw.line(self.ekran, (242, 72, 78), dil_uc,
-                         (dil_uc[0] + px * 5 - dx * 4, dil_uc[1] + py * 5 - dy * 4), 2)
-        pygame.draw.line(self.ekran, (242, 72, 78), dil_uc,
-                         (dil_uc[0] - px * 5 - dx * 4, dil_uc[1] - py * 5 - dy * 4), 2)
+        # base HEAD faces RIGHT, base TAIL points UP, base TURN connects RIGHT+DOWN
+        HEAD_ROT = {(1, 0): 0, (-1, 0): 180, (0, -1): 90, (0, 1): 270}
+        TAIL_ROT = {(0, -1): 0, (0, 1): 180, (1, 0): 270, (-1, 0): 90}
+        TURN_ROT = {
+            frozenset([(1, 0), (0, 1)]): 0,     # RIGHT + DOWN  (base)
+            frozenset([(1, 0), (0, -1)]): 90,   # RIGHT + UP
+            frozenset([(-1, 0), (0, -1)]): 180, # LEFT  + UP
+            frozenset([(-1, 0), (0, 1)]): 270,  # LEFT  + DOWN
+        }
+
+        n = len(self.yilan)
+        for i, pos in enumerate(self.yilan):
+            rect = self.kare(pos)
+            if i == 0:
+                angle = HEAD_ROT.get(tuple(self.yon), 0)
+                img = pygame.transform.rotate(head_img, angle)
+            elif i == n - 1:
+                dx = self.yilan[i - 1][0] - pos[0]
+                dy = self.yilan[i - 1][1] - pos[1]
+                angle = TAIL_ROT.get((dx, dy), 0)
+                img = pygame.transform.rotate(tail_img, angle)
+            else:
+                d_next = (self.yilan[i - 1][0] - pos[0], self.yilan[i - 1][1] - pos[1])
+                d_prev = (self.yilan[i + 1][0] - pos[0], self.yilan[i + 1][1] - pos[1])
+                if d_next[0] == -d_prev[0] and d_next[1] == -d_prev[1]:
+                    angle = 0 if d_next[0] != 0 else 90
+                    img = pygame.transform.rotate(body_img, angle)
+                else:
+                    angle = TURN_ROT.get(frozenset([d_next, d_prev]), 0)
+                    img = pygame.transform.rotate(turn_img, angle)
+            self.ekran.blit(img, img.get_rect(center=rect.center))
 
     def sonuc_ciz(self):
         klasor = "Won" if self.durum == "kazandin" else "Lost"
         self.kutu((0, 0, W, H), 45)
         modal_adi = "ui_modal_bg_green.png" if klasor == "Won" else "ui_modal_bg_red.png"
-        modal = self.a.al("Levels", klasor, modal_adi, boyut=(430, 400))
-        r = modal.get_rect(center=(W // 2, ALAN.y + 200))
+        modal = self.a.al("Levels", klasor, modal_adi, boyut=(512, 476))
+        r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
         baslik = "KAZANDIN" if klasor == "Won" else "KAYBETTİN"
-        self.yazi(baslik, self.baslik_font, BEYAZ, (r.centerx, r.y + 30))
+        self.yazi(baslik, self.sonuc_baslik_font, BEYAZ, (r.centerx, r.y + 40))
         yildiz = "icon_star_green.png" if klasor == "Won" else "icon_star_gray.png"
-        self.ekran.blit(self.a.al("Levels", klasor, yildiz, boyut=(110, 40)),
-                        (r.centerx - 55, r.y + 105))
-        self.yazi(f"{self.puan} Puan", self.font, (45, 48, 55), (r.centerx, r.y + 163))
+        self.ekran.blit(self.a.al("Levels", klasor, yildiz, boyut=(132, 48)),
+                        (r.centerx - 66, r.y + 105))
+        self.yazi(f"{self.puan} Puan", self.sonuc_skor_font, (45, 48, 55), (r.centerx, r.y + 185))
         sure = self.sonuc_suresi if self.sonuc_suresi else time.time() - self.baslama
-        self.sonuc_stat_ciz(klasor, pygame.Rect(r.centerx - 142, r.y + 210, 128, 50),
-                            "icon_clock.png", "Geçen Süre", sure_yaz(sure))
-        self.sonuc_stat_ciz(klasor, pygame.Rect(r.centerx + 14, r.y + 210, 128, 50),
-                            "icon_apple.png", "Meyve Sayısı", f"{self.toplanan}/{self.hedef()}")
-        self.result_main = pygame.Rect(r.centerx - 144, r.y + 296, 132, 43)
-        self.result_action = pygame.Rect(r.centerx + 12, r.y + 296, 132, 43)
+        self.sonuc_stat_ciz(klasor, pygame.Rect(r.centerx - 208, r.y + 240, 198, 77),
+                             "icon_clock.png", "Geçen Süre", sure_yaz(sure))
+        self.sonuc_stat_ciz(klasor, pygame.Rect(r.centerx + 10, r.y + 240, 198, 77),
+                             "icon_apple.png", "Meyve Sayısı", f"{self.toplanan}/{self.hedef()}")
+        self.result_main = pygame.Rect(r.centerx - 208, r.y + 350, 198, 64)
+        self.result_action = pygame.Rect(r.centerx + 10, r.y + 350, 198, 64)
         self.sonuc_buton_ciz(klasor, self.result_main, "btn_bg_gray.png", "btn_bg_dark_gray.png", "Ana Menü")
         btn = "btn_bg_pink.png" if klasor == "Won" else "btn_bg_red.png"
         ikon = "icon_arrow_right_white.png" if klasor == "Won" else "icon_retry_white.png"
@@ -830,14 +859,31 @@ class Oyun:
 
     def sonuc_stat_ciz(self, klasor, rect, ikon, baslik, deger):
         self.ekran.blit(self.a.al("Levels", klasor, "ui_panel_stats_light.png", boyut=rect.size), rect)
-        self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(24, 24)), (rect.x + 12, rect.y + 13))
-        self.yazi(baslik, self.mini, (78, 83, 91), (rect.x + 78, rect.y + 17))
-        self.yazi(deger, self.kucuk, (45, 48, 55), (rect.x + 78, rect.y + 33))
+        self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(30, 30)), (rect.x + 16, rect.y + 23))
+        self.yazi_sol(baslik, self.kucuk, (78, 83, 91), (rect.x + 60, rect.y + 27))
+        self.yazi_sol(deger, self.sonuc_stat_val_font, (45, 48, 55), (rect.x + 60, rect.y + 50))
 
     def sonuc_buton_ciz(self, klasor, rect, bg, ikon, metin):
-        self.ekran.blit(self.a.al("Levels", klasor, bg, boyut=rect.size), rect)
-        self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(22, 22)), (rect.x + 12, rect.y + 10))
-        self.yazi(metin.upper(), self.dijital_mini, BEYAZ, (rect.centerx + 13, rect.centery))
+        pos = pygame.mouse.get_pos()
+        hover = rect.collidepoint(pos)
+        
+        draw_rect = rect.copy()
+        if hover:
+            draw_rect = draw_rect.inflate(8, 6)
+            draw_rect.y -= 3
+            
+        self.ekran.blit(self.a.al("Levels", klasor, bg, boyut=draw_rect.size), draw_rect)
+        
+        if ikon == "btn_bg_dark_gray.png":
+            # Left-aligned icon (Home)
+            self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(24, 24)), 
+                            (draw_rect.x + 20, draw_rect.centery - 12))
+            self.yazi(metin.upper(), self.sonuc_buton_font, BEYAZ, (draw_rect.centerx + 12, draw_rect.centery - 2))
+        else:
+            # Right-aligned icon (Arrow / Replay)
+            self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(24, 24)), 
+                            (draw_rect.right - 20 - 24, draw_rect.centery - 12))
+            self.yazi(metin.upper(), self.sonuc_buton_font, BEYAZ, (draw_rect.centerx - 12, draw_rect.centery - 2))
 
     def pause_ciz(self):
         self.kutu((0, 0, W, H), 155)
@@ -851,7 +897,7 @@ class Oyun:
         self.yazi("Duraklatıldı", self.buyuk, BEYAZ, (panel.centerx, panel.y + 58))
         mod = "Zorlayıcı" if self.oyun_modu == "zor" else "Normal"
         self.yazi(f"{mod} Mod - Seviye {self.level} - Skor {self.puan}", self.font,
-                  (238, 226, 250), (panel.centerx, panel.y + 124))
+                  (238, 226, 250), (panel.centerx, panel.y + 132))
         self.pause_resume_rect = pygame.Rect(panel.centerx - 135, panel.y + 190, 270, 58)
         self.pause_settings_rect = pygame.Rect(panel.centerx - 135, panel.y + 264, 270, 58)
         self.pause_lobby_rect = pygame.Rect(panel.centerx - 135, panel.y + 338, 270, 58)
@@ -859,35 +905,46 @@ class Oyun:
         self.buton_resimli(self.pause_settings_rect, ("Main Menu", "btn_bg_gray.png"), None, "Ayarlar")
         self.buton_resimli(self.pause_lobby_rect, ("Main Menu", "btn_bg_red.png"), None, "Lobiye Dön")
 
+    def ayar_buton_ciz(self, rect, bg, metin, font=None):
+        pos = pygame.mouse.get_pos()
+        hover = rect.collidepoint(pos)
+        
+        draw_rect = rect.copy()
+        if hover:
+            draw_rect = draw_rect.inflate(8, 6)
+            draw_rect.y -= 2
+            
+        f = font or self.buton_font
+        self.ekran.blit(self.a.al("Settings", bg, boyut=draw_rect.size), draw_rect)
+        self.yazi(metin, f, BEYAZ, draw_rect.center)
+
     def ayarlar_ciz(self):
         self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(500, 325))
+        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(500, 300))
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
-        self.yazi("AYARLAR", self.baslik_font, BEYAZ, (r.centerx, r.y + 36))
-        self.settings_close = pygame.Rect(r.right - 48, r.y + 18, 34, 34)
-        self.ekran.blit(self.a.al("Settings", "btn_bg_red_round.png", boyut=self.settings_close.size), self.settings_close)
-        self.yazi("X", self.buton_kucuk, BEYAZ, self.settings_close.center)
-        icerik = pygame.Rect(r.x + 48, r.y + 78, r.w - 96, 198)
-        self.yazi_sol("Oyun Sesleri", self.kucuk, (64, 66, 74), (icerik.x + 18, r.y + 104))
-        self.yazi_sol("Müzik", self.kucuk, (64, 66, 74), (icerik.x + 18, r.y + 158))
-        self.yazi_sol("Müzik Sesi", self.kucuk, (64, 66, 74), (icerik.x + 18, r.y + 216))
-        self.effects_toggle = pygame.Rect(icerik.right - 120, r.y + 82, 104, 43)
-        self.music_toggle = pygame.Rect(icerik.right - 120, r.y + 136, 104, 43)
-        self.volume_down = pygame.Rect(icerik.right - 176, r.y + 196, 50, 42)
-        self.volume_up = pygame.Rect(icerik.right - 54, r.y + 196, 50, 42)
+        self.yazi("AYARLAR", self.ayarlar_baslik_font, BEYAZ, (r.centerx, r.y + 35))
+        
+        self.settings_close = pygame.Rect(r.right - 58, r.y + 12, 42, 42)
+        pos = pygame.mouse.get_pos()
+        close_hover = self.settings_close.collidepoint(pos)
+        close_rect = self.settings_close.copy()
+        if close_hover:
+            close_rect = close_rect.inflate(6, 6)
+            
+        self.ekran.blit(self.a.al("Settings", "btn_bg_red_round.png", boyut=close_rect.size), close_rect)
+        self.yazi("X", self.buton_font, BEYAZ, close_rect.center)
+        
+        self.yazi_sol("Oyun Sesleri", self.ayarlar_label_font, (64, 66, 74), (r.x + 48, r.y + 130))
+        self.yazi_sol("Müzik", self.ayarlar_label_font, (64, 66, 74), (r.x + 48, r.y + 215))
+        
+        self.effects_toggle = pygame.Rect(r.right - 168, r.y + 104, 120, 52)
+        self.music_toggle = pygame.Rect(r.right - 168, r.y + 189, 120, 52)
+        
         self.ayar_buton_ciz(self.effects_toggle, "btn_bg_green.png" if self.efekt_acik else "btn_bg_red.png",
-                            "AÇIK" if self.efekt_acik else "KAPALI")
+                            "AÇIK" if self.efekt_acik else "KAPALI", self.ayarlar_buton_font)
         self.ayar_buton_ciz(self.music_toggle, "btn_bg_green.png" if self.ses_acik else "btn_bg_red.png",
-                            "AÇIK" if self.ses_acik else "KAPALI")
-        self.ayar_buton_ciz(self.volume_down, "btn_bg_red.png", "-")
-        self.yazi(f"%{int(self.muzik_ses * 100)}", self.kucuk, (64, 66, 74),
-                  (icerik.right - 88, r.y + 217))
-        self.ayar_buton_ciz(self.volume_up, "btn_bg_green.png", "+")
-
-    def ayar_buton_ciz(self, rect, bg, metin):
-        self.ekran.blit(self.a.al("Settings", bg, boyut=rect.size), rect)
-        self.yazi(metin, self.buton_font, BEYAZ, rect.center)
+                            "AÇIK" if self.ses_acik else "KAPALI", self.ayarlar_buton_font)
 
     def cikis_ciz(self):
         self.kutu((0, 0, W, H), 105)
@@ -908,36 +965,63 @@ class Oyun:
         self.yazi(metin, self.buton_font, BEYAZ, (rect.centerx + 18, rect.centery - 1))
 
     def buton_resimli(self, rect, bg, ikon, metin):
-        self.ekran.blit(self.a.al(*bg, boyut=rect.size), rect)
+        pos = pygame.mouse.get_pos()
+        hover = rect.collidepoint(pos)
+        
+        draw_rect = rect.copy()
+        if hover:
+            draw_rect = draw_rect.inflate(8, 6)
+            draw_rect.y -= 3
+            
+        self.ekran.blit(self.a.al(*bg, boyut=draw_rect.size), draw_rect)
         if ikon:
-            boy = min(30, rect.h - 18)
-            self.ekran.blit(self.a.al(*ikon, boyut=(boy, boy)), (rect.x + 18, rect.centery - boy // 2))
-            x = rect.centerx + 15
+            boy = min(30, draw_rect.h - 18)
+            self.ekran.blit(self.a.al(*ikon, boyut=(boy, boy)), (draw_rect.x + 18, draw_rect.centery - boy // 2))
+            x = draw_rect.centerx + 15
         else:
-            x = rect.centerx
-        self.yazi(metin, self.buton_font, BEYAZ, (x, rect.centery - 1))
+            x = draw_rect.centerx
+        self.yazi(metin, self.buton_font, BEYAZ, (x, draw_rect.centery - 4))
 
     def ana_menu_buton_ciz(self, rect, bg, ikon, metin):
-        self.ekran.blit(self.a.al("Main Menu", bg, boyut=rect.size), rect)
+        pos = pygame.mouse.get_pos()
+        hover = rect.collidepoint(pos)
+        
+        draw_rect = rect.copy()
+        if hover:
+            draw_rect = rect.inflate(12, 8)
+            draw_rect.y -= 4
+            
+        self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
         yazi_img = self.menu_buton_font.render(metin, True, BEYAZ)
         ikon_kaynak = self.a.al("Main Menu", ikon)
-        ikon_h = int(yazi_img.get_height() * 0.8)
+        ikon_h = int(yazi_img.get_height() * 0.95)
         ikon_w = max(1, round(ikon_kaynak.get_width() * ikon_h / ikon_kaynak.get_height()))
         ikon_img = pygame.transform.smoothscale(ikon_kaynak, (ikon_w, ikon_h))
         gap = 12
         toplam = ikon_img.get_width() + gap + yazi_img.get_width()
-        bas_x = rect.centerx - toplam // 2
+        bas_x = draw_rect.centerx - toplam // 2
         ikon_x = bas_x
         yazi_x = bas_x + ikon_img.get_width() + gap
-        ikon_y = rect.centery - ikon_img.get_height() // 2
-        yazi_y = rect.centery - yazi_img.get_height() // 2
+        
+        offset_y = -5
+        ikon_y = draw_rect.centery - ikon_img.get_height() // 2 + offset_y
+        yazi_y = draw_rect.centery - yazi_img.get_height() // 2 + offset_y
+        
         self.ekran.blit(ikon_img, (ikon_x, ikon_y))
         self.ekran.blit(yazi_img, (yazi_x, yazi_y))
 
-    def mod_buton_ciz(self, rect, bg, metin):
-        self.ekran.blit(self.a.al("Main Menu", bg, boyut=rect.size), rect)
-        yazi = self.mode_buton_font.render(metin, True, BEYAZ)
-        self.ekran.blit(yazi, yazi.get_rect(center=rect.center))
+    def mod_buton_ciz(self, rect, bg, metin, font=None):
+        pos = pygame.mouse.get_pos()
+        hover = rect.collidepoint(pos)
+        
+        draw_rect = rect.copy()
+        if hover:
+            draw_rect = draw_rect.inflate(8, 6)
+            draw_rect.y -= 3
+            
+        f = font or self.mode_buton_font
+        self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
+        self.yazi(metin, f, BEYAZ, (draw_rect.centerx, draw_rect.centery - 4))
 
     def mod_rozet_ciz(self, metin, rect):
         rozet = self.a.al("Main Menu", "btn_bg_gray.png", boyut=rect.size)

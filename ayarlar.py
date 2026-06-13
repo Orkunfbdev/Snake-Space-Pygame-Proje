@@ -1,8 +1,8 @@
 import pygame
 
 W, H, FPS = 1280, 800, 120
-KARE, SUTUN, SATIR, SON_LEVEL = 32, 28, 16, 20
-ALAN = pygame.Rect((W - SUTUN * KARE) // 2, 200, SUTUN * KARE, SATIR * KARE)
+KARE, SUTUN, SATIR, SON_LEVEL = 32, 34, 16, 20
+ALAN = pygame.Rect((W - SUTUN * KARE) // 2, 176, SUTUN * KARE, SATIR * KARE)
 
 BEYAZ = (245, 240, 255)
 KOYU = (10, 8, 25)
