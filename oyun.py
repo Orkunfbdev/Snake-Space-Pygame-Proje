@@ -179,6 +179,7 @@ class Oyun:
         if self.pause_zamani:
             gecen = time.time() - self.pause_zamani
             self.baslama += gecen
+            self.son_hareket += round(gecen * 1000)
             if self.elma_yeri:
                 self.elma_zamani += gecen
         self.pause_zamani = 0
@@ -187,6 +188,7 @@ class Oyun:
     # Yeni seviye için yılanı, engelleri, elmayı ve süreleri sıfırlar.
     def level_kur(self):
         self.yilan = [(7, 8), (6, 8), (5, 8)]
+        self.onceki_yilan = list(self.yilan)
         self.yon = self.sonraki = (1, 0)
         self.toplanan = 0
         self.kapi_acik = False
@@ -198,6 +200,7 @@ class Oyun:
         self.elma_yeri = None
         self.elma_uret()
         self.tahta = self.tahta_hazirla()
+        self.oyun_zemini = self.oyun_zemini_hazirla()
 
     # Açık ve koyu kareleri sırayla dizerek oyun tahtasını bir kez hazırlar.
     def tahta_hazirla(self):
@@ -208,6 +211,18 @@ class Oyun:
             for x in range(SUTUN):
                 s.blit(acik if (x + y) % 2 == 0 else koyu, (x * KARE, y * KARE))
         return s
+
+    # Değişmeyen arka plan, tahta ve engelleri tek yüzeyde önceden hazırlar.
+    def oyun_zemini_hazirla(self):
+        zemin = self.a.level(self.level, "bg_world.png", (W, H)).copy()
+        zemin.blit(self.tahta, ALAN)
+        kenar = pygame.Surface(ALAN.size, pygame.SRCALPHA)
+        pygame.draw.rect(kenar, (0, 0, 0, 85), kenar.get_rect(), 3)
+        zemin.blit(kenar, ALAN.topleft)
+        duvar = self.a.level(self.level, "wall_block.png", (KARE, KARE))
+        for engel in self.engeller:
+            zemin.blit(duvar, self.kare(engel))
+        return zemin
 
     # Birinci levelde 3, sonraki levellerde üçer artan elma hedefini hesaplar.
     def hedef(self):
@@ -527,9 +542,11 @@ class Oyun:
             self.kaybetme_sesi_cal()
             self.durum = "kaybettin"
             return True
+        self.onceki_yilan = list(self.yilan)
         self.yilan.insert(0, bas)
         if bas == self.elma_yeri:
             self.elma_topla()
+            self.onceki_yilan.append(self.onceki_yilan[-1])
         else:
             self.yilan.pop()
         if self.kapi_acik and bas == self.kapi_yeri:
@@ -760,16 +777,8 @@ class Oyun:
 
     # Dünya arka planını, tahtayı, engelleri, elmayı, kapıyı ve yılanı çizer.
     def oyun_ciz(self):
-        self.ekran.fill((0, 0, 0))
-        self.ekran.blit(self.a.level(self.level, "bg_world.png", (W, H)), (0, 0))
+        self.ekran.blit(self.oyun_zemini, (0, 0))
         self.hud_ciz()
-        self.ekran.blit(self.tahta, ALAN)
-        kenar = pygame.Surface(ALAN.size, pygame.SRCALPHA)
-        pygame.draw.rect(kenar, (0, 0, 0, 85), kenar.get_rect(), 3)
-        self.ekran.blit(kenar, ALAN.topleft)
-        duvar = self.a.level(self.level, "wall_block.png", (KARE, KARE))
-        for e in self.engeller:
-            self.ekran.blit(duvar, self.kare(e))
         if self.kapi_acik:
             r = self.kare(self.kapi_yeri)
             portal = self.a.level(self.level, "fx_portal.png", (KARE + 14, KARE + 14))
@@ -816,54 +825,47 @@ class Oyun:
         x += r_key.get_width() + 12
         self.ekran.blit(yazi2, yazi2.get_rect(midleft=(x, orta)))
 
-    # Baş, düz gövde, dönüş ve kuyruk parçalarını yılanın yönüne göre döndürür.
+    # Yılanı yuvarlak köşeli tek parça gövde ve yönüne dönen baş ile çizer.
     def yilan_ciz(self):
         if len(self.yilan) < 2:
             return
 
         head_img = self.a.global_("snake_head.png", (KARE, KARE))
-        body_img = self.a.global_("snake_body_straight.png", (KARE, KARE))
-        turn_img = self.a.global_("snake_body_turn.png", (KARE, KARE))
-        tail_img = self.a.global_("snake_tail.png", (KARE, KARE))
 
-        # Parçaların arasında boşluk kalmaması için önce merkezleri birleştirir.
+        # Mantık kareleri arasında kalan konumu hesaplayarak yılanı akıcı kaydırır.
+        oran = min(1, (pygame.time.get_ticks() - self.son_hareket) / self.hiz())
+        centers = []
+        for eski, yeni in zip(self.onceki_yilan, self.yilan):
+            x = eski[0] + (yeni[0] - eski[0]) * oran
+            y = eski[1] + (yeni[1] - eski[1]) * oran
+            centers.append((round(ALAN.x + (x + 0.5) * KARE),
+                            round(ALAN.y + (y + 0.5) * KARE)))
+
+        # Dönüş sırasında parçaları çapraz değil eski kare merkezi üzerinden bağlar.
+        yol = [centers[0]]
+        for i, bitis in enumerate(centers[1:]):
+            bas = centers[i]
+            if bas[0] != bitis[0] and bas[1] != bitis[1]:
+                eski = self.onceki_yilan[i]
+                kose = (ALAN.x + eski[0] * KARE + KARE // 2,
+                        ALAN.y + eski[1] * KARE + KARE // 2)
+                if kose != yol[-1] and kose != bitis:
+                    yol.append(kose)
+            yol.append(bitis)
+
+        # Kalın çizgiler ve daire uçlar gövdeyi kesintisiz bir kapsül gibi gösterir.
         SNAKE_COL = (181, 73, 228)
         arm_w = int(KARE * 0.55)
-        centers = [self.kare(p).center for p in self.yilan]
-        for a, b in zip(centers, centers[1:]):
+        for a, b in zip(yol, yol[1:]):
             pygame.draw.line(self.ekran, SNAKE_COL, a, b, arm_w)
+        for nokta in yol:
+            pygame.draw.circle(self.ekran, SNAKE_COL, nokta, arm_w // 2)
 
-        # Kaynak görsellerin başlangıç yönlerine göre dönüş açıları.
+        # Baş görselinin başlangıç yönüne göre dönüş açısı.
         HEAD_ROT = {(1, 0): 0, (-1, 0): 180, (0, -1): 90, (0, 1): 270}
-        TAIL_ROT = {(0, -1): 0, (0, 1): 180, (1, 0): 270, (-1, 0): 90}
-        TURN_ROT = {
-            frozenset([(1, 0), (0, 1)]): 0,
-            frozenset([(1, 0), (0, -1)]): 90,
-            frozenset([(-1, 0), (0, -1)]): 180,
-            frozenset([(-1, 0), (0, 1)]): 270,
-        }
-
-        n = len(self.yilan)
-        for i, pos in enumerate(self.yilan):
-            rect = self.kare(pos)
-            if i == 0:
-                angle = HEAD_ROT.get(tuple(self.yon), 0)
-                img = pygame.transform.rotate(head_img, angle)
-            elif i == n - 1:
-                dx = self.yilan[i - 1][0] - pos[0]
-                dy = self.yilan[i - 1][1] - pos[1]
-                angle = TAIL_ROT.get((dx, dy), 0)
-                img = pygame.transform.rotate(tail_img, angle)
-            else:
-                d_next = (self.yilan[i - 1][0] - pos[0], self.yilan[i - 1][1] - pos[1])
-                d_prev = (self.yilan[i + 1][0] - pos[0], self.yilan[i + 1][1] - pos[1])
-                if d_next[0] == -d_prev[0] and d_next[1] == -d_prev[1]:
-                    angle = 0 if d_next[0] != 0 else 90
-                    img = pygame.transform.rotate(body_img, angle)
-                else:
-                    angle = TURN_ROT.get(frozenset([d_next, d_prev]), 0)
-                    img = pygame.transform.rotate(turn_img, angle)
-            self.ekran.blit(img, img.get_rect(center=rect.center))
+        angle = HEAD_ROT.get(tuple(self.yon), 0)
+        head_img = pygame.transform.rotate(head_img, angle)
+        self.ekran.blit(head_img, head_img.get_rect(center=centers[0]))
 
     # Kazanma veya kaybetme sonucunu puan ve istatistiklerle gösterir.
     def sonuc_ciz(self):
@@ -1123,7 +1125,9 @@ class Oyun:
         self.ciz()
         pygame.display.flip()
         while True:
-            degisti = self.olaylar() or self.guncelle()
+            olay_degisti = self.olaylar()
+            oyun_degisti = self.guncelle()
+            degisti = olay_degisti or oyun_degisti or self.durum == "oyun"
             sure = int(time.time() - self.baslama)
             if self.durum == "oyun" and sure != self.son_sure:
                 self.son_sure = sure
