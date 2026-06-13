@@ -443,6 +443,9 @@ class Oyun:
                     self.menu_muzigi_baslat()
                 return True
         if self.durum == "pause":
+            if self.pause_close_rect.collidepoint(pos):
+                self.pause_bitir()
+                return True
             if self.pause_resume_rect.collidepoint(pos):
                 self.pause_bitir()
                 return True
@@ -886,24 +889,61 @@ class Oyun:
             self.yazi(metin.upper(), self.sonuc_buton_font, BEYAZ, (draw_rect.centerx - 12, draw_rect.centery - 2))
 
     def pause_ciz(self):
-        self.kutu((0, 0, W, H), 155)
-        panel = pygame.Rect(W // 2 - 270, H // 2 - 215, 540, 430)
-        kart = pygame.Surface(panel.size, pygame.SRCALPHA)
-        pygame.draw.rect(kart, (24, 17, 45, 238), kart.get_rect(), border_radius=28)
-        pygame.draw.rect(kart, (228, 74, 238, 255), kart.get_rect(), 4, border_radius=28)
-        pygame.draw.rect(kart, (70, 40, 105, 225), (28, 96, panel.w - 56, 78), border_radius=18)
-        pygame.draw.rect(kart, (128, 72, 164, 170), (28, 96, panel.w - 56, 78), 2, border_radius=18)
-        self.ekran.blit(kart, panel)
-        self.yazi("Duraklatıldı", self.buyuk, BEYAZ, (panel.centerx, panel.y + 58))
-        mod = "Zorlayıcı" if self.oyun_modu == "zor" else "Normal"
-        self.yazi(f"{mod} Mod - Seviye {self.level} - Skor {self.puan}", self.font,
-                  (238, 226, 250), (panel.centerx, panel.y + 132))
-        self.pause_resume_rect = pygame.Rect(panel.centerx - 135, panel.y + 190, 270, 58)
-        self.pause_settings_rect = pygame.Rect(panel.centerx - 135, panel.y + 264, 270, 58)
-        self.pause_lobby_rect = pygame.Rect(panel.centerx - 135, panel.y + 338, 270, 58)
-        self.buton_resimli(self.pause_resume_rect, ("Main Menu", "btn_bg_pink.png"), None, "Devam Et")
-        self.buton_resimli(self.pause_settings_rect, ("Main Menu", "btn_bg_gray.png"), None, "Ayarlar")
-        self.buton_resimli(self.pause_lobby_rect, ("Main Menu", "btn_bg_red.png"), None, "Lobiye Dön")
+        self.kutu((0, 0, W, H), 130)
+        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(680, 404))
+        r = modal.get_rect(center=(W // 2, H // 2))
+        self.ekran.blit(modal, r)
+
+        self.yazi("DURAKLATILDI", self.ayarlar_baslik_font, BEYAZ,
+                  (r.centerx, r.y + 47))
+
+        self.pause_close_rect = pygame.Rect(r.right - 68, r.y + 17, 48, 48)
+        close_rect = self.pause_close_rect.copy()
+        if close_rect.collidepoint(pygame.mouse.get_pos()):
+            close_rect = close_rect.inflate(6, 6)
+        self.ekran.blit(
+            self.a.al("Settings", "btn_bg_red_round.png", boyut=close_rect.size),
+            close_rect
+        )
+        self.yazi("X", self.buton_font, BEYAZ, close_rect.center)
+
+        mod = "Zorlayıcı Mod" if self.oyun_modu == "zor" else "Normal Mod"
+        bilgi = f"{mod}   |   Seviye {self.level}   |   Skor {self.puan}"
+        self.yazi(bilgi, self.font, (64, 66, 74), (r.centerx, r.y + 151))
+
+        buton_y = r.y + 245
+        self.pause_resume_rect = pygame.Rect(r.x + 38, buton_y, 180, 68)
+        self.pause_settings_rect = pygame.Rect(r.x + 235, buton_y, 190, 68)
+        self.pause_lobby_rect = pygame.Rect(r.x + 442, buton_y, 200, 68)
+        self.pause_buton_ciz(
+            self.pause_resume_rect, "btn_bg_pink.png", "icon_play.png", "DEVAM ET"
+        )
+        self.pause_buton_ciz(
+            self.pause_settings_rect, "btn_bg_gray.png", "icon_settings.png", "AYARLAR"
+        )
+        self.pause_buton_ciz(
+            self.pause_lobby_rect, "btn_bg_red.png", "icon_exit.png", "LOBİYE DÖN"
+        )
+
+    def pause_buton_ciz(self, rect, bg, ikon, metin):
+        draw_rect = rect.copy()
+        if rect.collidepoint(pygame.mouse.get_pos()):
+            draw_rect = draw_rect.inflate(8, 6)
+
+        self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
+        yazi = self.buton_font.render(metin, True, BEYAZ)
+        ikon_kaynak = self.a.al("Main Menu", ikon)
+        ikon_h = int(yazi.get_height() * 0.8)
+        ikon_w = round(ikon_kaynak.get_width() * ikon_h / ikon_kaynak.get_height())
+        ikon_img = pygame.transform.smoothscale(ikon_kaynak, (ikon_w, ikon_h))
+
+        gap = 12
+        toplam = ikon_img.get_width() + gap + yazi.get_width()
+        bas_x = draw_rect.centerx - toplam // 2
+        ikon_y = draw_rect.centery - ikon_img.get_height() // 2
+        yazi_y = draw_rect.centery - yazi.get_height() // 2
+        self.ekran.blit(ikon_img, (bas_x, ikon_y))
+        self.ekran.blit(yazi, (bas_x + ikon_img.get_width() + gap, yazi_y))
 
     def ayar_buton_ciz(self, rect, bg, metin, font=None):
         pos = pygame.mouse.get_pos()
