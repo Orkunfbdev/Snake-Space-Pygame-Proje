@@ -7,6 +7,7 @@ import pygame
 from assetler import Assetler, GUI
 from ayarlar import *
 
+# Her bölgenin menüde gösterilen adı ve kısa açıklaması.
 BOLGELER = {
     1: ("Başlangıç Sistemi", "Temel eğitim bölgesi. Kontroller ve tempo burada öğrenilir."),
     2: ("Dış Halkalar", "İklim değişir, engeller artar ve rota biraz daralır."),
@@ -15,6 +16,7 @@ BOLGELER = {
     5: ("Kaos Çekirdeği", "Son bölge. Hedef sayısı ve hız en yüksek seviyededir."),
 }
 
+# Yirmi seviyenin gezegen adları.
 LEVEL_ADLARI = {
     1: "Dünya", 2: "Yeni Dünya", 3: "Tropik", 4: "Su Gaz Devi",
     5: "Çöl", 6: "Kum Fırtınası", 7: "Buz", 8: "Buzul Göktaşı",
@@ -24,7 +26,9 @@ LEVEL_ADLARI = {
 }
 
 
+# Menüleri, oyun mekaniğini, çizimleri ve sesleri yöneten ana sınıf.
 class Oyun:
+    # Pygame sistemlerini ve oyunun başlangıç değişkenlerini hazırlar.
     def __init__(self):
         pygame.mixer.pre_init(44100, -16, 2, 256)
         pygame.init()
@@ -65,11 +69,13 @@ class Oyun:
         self.level_kur()
         self.menu_muzigi_baslat()
 
+    # Özel font bulunamazsa sistem fontuna geçer.
     def font_yukle(self, dosya, boyut, sistem="arial", bold=False):
         if dosya.exists():
             return pygame.font.Font(str(dosya), boyut)
         return pygame.font.SysFont(sistem, boyut, bold=bold)
 
+    # Farklı ekranlarda kullanılan Rubik ve Digitalt fontlarını oluşturur.
     def fontlari_kur(self):
         font_klasor = GUI / "Fonts"
         rubik = font_klasor / "Rubik-SemiBold.ttf"
@@ -97,6 +103,7 @@ class Oyun:
         self.sonuc_buton_font = self.font_yukle(digital, 22, "arialblack")
         self.sonuc_stat_val_font = self.font_yukle(rubik, 24)
 
+    # Müzik ve efekt dosyalarını pygame mixer içine yükler.
     def sesleri_hazirla(self):
         try:
             pygame.mixer.init()
@@ -107,6 +114,7 @@ class Oyun:
         except (pygame.error, OSError):
             self.ses_hazir = False
 
+    # Ana menü müziğini döngü halinde başlatır.
     def menu_muzigi_baslat(self):
         if not self.ses_acik or not self.ses_hazir:
             return
@@ -125,16 +133,19 @@ class Oyun:
         except (pygame.error, OSError):
             self.ses_hazir = False
 
+    # Çalan menü müziğini tamamen durdurur.
     def menu_muzigi_durdur(self):
         if self.ses_hazir:
             pygame.mixer.music.stop()
         self.menu_caliyor = False
         self.menu_durus_zamani = 0
 
+    # Oyuna girildiğinde müziğin on saniye sonra kısılmasını planlar.
     def menu_muzigi_oyunda_kapat(self):
         if self.menu_caliyor:
             self.menu_durus_zamani = pygame.time.get_ticks() + 10000
 
+    # Bekleme süresi dolunca menü müziğini yumuşak şekilde kapatır.
     def sesleri_guncelle(self):
         if self.menu_durus_zamani and pygame.time.get_ticks() >= self.menu_durus_zamani:
             if self.ses_hazir:
@@ -142,11 +153,13 @@ class Oyun:
             self.menu_caliyor = False
             self.menu_durus_zamani = 0
 
+    # Oyuncu kaybettiğinde menü müziğini kesip kaybetme efektini çalar.
     def kaybetme_sesi_cal(self):
         self.menu_muzigi_durdur()
         if self.efekt_acik and self.ses_hazir and self.game_over_sesi:
             self.game_over_sesi.play()
 
+    # Level geçiş animasyonuyla birlikte geçiş efektini çalar.
     def level_gecis_sesi_cal(self):
         if self.efekt_acik and self.ses_hazir and self.level_gecis_sesi:
             self.level_gecis_sesi.stop()
@@ -155,11 +168,13 @@ class Oyun:
                 pygame.mixer.music.set_volume(self.muzik_ses * 0.35)
             self.level_gecis_sesi.play()
 
+    # Oyun süresini kaybetmeden pause durumuna geçer.
     def pause_baslat(self):
         if self.durum == "oyun":
             self.pause_zamani = time.time()
             self.durum = "pause"
 
+    # Pause sırasında geçen zamanı oyun ve elma sürelerinden çıkarır.
     def pause_bitir(self):
         if self.pause_zamani:
             gecen = time.time() - self.pause_zamani
@@ -169,6 +184,7 @@ class Oyun:
         self.pause_zamani = 0
         self.durum = "oyun"
 
+    # Yeni seviye için yılanı, engelleri, elmayı ve süreleri sıfırlar.
     def level_kur(self):
         self.yilan = [(7, 8), (6, 8), (5, 8)]
         self.yon = self.sonraki = (1, 0)
@@ -183,6 +199,7 @@ class Oyun:
         self.elma_uret()
         self.tahta = self.tahta_hazirla()
 
+    # Açık ve koyu kareleri sırayla dizerek oyun tahtasını bir kez hazırlar.
     def tahta_hazirla(self):
         acik = self.a.level(self.level, "checkers_light.png", (KARE, KARE))
         koyu = self.a.level(self.level, "checkers_dark.png", (KARE, KARE))
@@ -192,15 +209,18 @@ class Oyun:
                 s.blit(acik if (x + y) % 2 == 0 else koyu, (x * KARE, y * KARE))
         return s
 
+    # Birinci levelde 3, sonraki levellerde üçer artan elma hedefini hesaplar.
     def hedef(self):
         return 3 if self.level == 1 else 5 + (self.level - 2) * 3
 
+    # Level yükseldikçe hareket aralığını azaltarak yılanı kademeli hızlandırır.
     def hiz(self):
         taban = 142 - (self.level - 1) * 2
         if self.oyun_modu == "zor":
             taban -= 10
         return max(90, taban)
 
+    # Level numarasını sabit tohum olarak kullanıp engelleri üretir.
     def engel_uret(self):
         rnd = random.Random(self.level * 77)
         engel = set()
@@ -218,6 +238,7 @@ class Oyun:
             engel |= {(x, 5) for x in range(4, SUTUN - 4) if abs(x - bos) > 1 and (x, 5) not in yasak}
         return engel
 
+    # Elmalar tamamlandığında boş bir kareye çıkış kapısı yerleştirir.
     def kapi_uret(self):
         dolu = set(self.yilan) | self.engeller
         if self.elma_yeri:
@@ -226,6 +247,7 @@ class Oyun:
                if (x, y) not in dolu]
         return random.choice(bos) if bos else (SUTUN - 3, SATIR - 3)
 
+    # Haritada aynı anda yalnızca bir elma olacak şekilde yeni konum seçer.
     def elma_uret(self):
         if self.toplanan >= self.hedef():
             self.elma_yeri = None
@@ -239,14 +261,17 @@ class Oyun:
         self.elma_yeri = random.choice(bos)
         self.elma_zamani = time.time()
 
+    # Level numarasından 1 ile 5 arasındaki bölge numarasını bulur.
     def bolge_no(self, level=None):
         return ((level or self.level) - 1) // 4 + 1
 
+    # Gezegenin açık veya kilitli görsel yolunu oluşturur.
     def gezegen_yolu(self, level, kilitli=False):
         bolge = self.bolge_no(level)
         durum = "locked" if kilitli else "color"
         return ("Level Menus", f"Region {bolge}", f"level_{level:02d}_planet_{durum}.png")
 
+    # Seçilen level için sesli geçiş animasyonunu başlatır.
     def gecis_baslat(self, level, puan=None):
         self.gecis_level = level
         self.gecis_puan = puan
@@ -255,6 +280,7 @@ class Oyun:
         self.gecis_basla = pygame.time.get_ticks()
         self.durum = "gecis"
 
+    # Geçiş bitince leveli verilen puanla oynanabilir duruma getirir.
     def level_baslat(self, level, puan=None):
         if self.game_over_sesi:
             self.game_over_sesi.stop()
@@ -272,6 +298,7 @@ class Oyun:
         self.menu_muzigi_oyunda_kapat()
         self.durum = "oyun"
 
+    # Seçilen oyun modunu sıfırdan başlatır ve level menüsünü açar.
     def mod_baslat(self, mod):
         self.oyun_modu = mod
         self.region = 1
@@ -283,6 +310,7 @@ class Oyun:
         self.durum = "level_menu"
         self.menu_muzigi_baslat()
 
+    # Zorlayıcı modda ölüm sonrası bütün ilerlemeyi ilk levele döndürür.
     def zor_mod_sifirla(self):
         self.region = 1
         self.level = 1
@@ -291,6 +319,7 @@ class Oyun:
         self.level_puan_baslangic = 0
         self.level_kur()
 
+    # Pencere, klavye ve fare olaylarını tek noktadan işler.
     def olaylar(self):
         degisti = False
         for e in pygame.event.get():
@@ -306,6 +335,7 @@ class Oyun:
                     degisti = True
         return degisti
 
+    # Basılan tuşu mevcut ekrana göre hareket veya menü komutuna çevirir.
     def tus(self, tus):
         if self.durum == "menu":
             if tus in (pygame.K_RETURN, pygame.K_SPACE):
@@ -373,6 +403,7 @@ class Oyun:
             return True
         return False
 
+    # Fare tıklamasını mevcut ekrandaki buton ve gezegenlerle eşleştirir.
     def tikla(self, pos):
         if self.durum == "menu":
             if self.play_rect.collidepoint(pos):
@@ -463,6 +494,7 @@ class Oyun:
                 return True
         return False
 
+    # Sonuç ekranındaki devam işlemini oyun moduna göre belirler.
     def sonuc_devam(self):
         if self.durum == "kaybettin":
             if self.oyun_modu == "zor":
@@ -476,6 +508,7 @@ class Oyun:
             self.durum = "level_menu"
             self.menu_muzigi_baslat()
 
+    # Hareket zamanı geldiğinde yılanı ilerletir ve oyun kurallarını kontrol eder.
     def guncelle(self):
         self.sesleri_guncelle()
         if self.durum == "gecis":
@@ -505,19 +538,23 @@ class Oyun:
             self.durum = "kazandin"
         return True
 
+    # Yeni baş konumunun duvara, engele veya yılanın gövdesine çarpıp çarpmadığını bulur.
     def carpti(self, yer):
         x, y = yer
         return x < 0 or y < 0 or x >= SUTUN or y >= SATIR or yer in self.engeller or yer in self.yilan[:-1]
 
+    # Elmayı toplama hızına göre puan ekler ve sıradaki elmayı üretir.
     def elma_topla(self):
         gecen = time.time() - self.elma_zamani
         self.puan += max(10, int(120 + self.level * 12 - gecen * (7 + self.level)))
         self.toplanan += 1
         self.elma_uret()
 
+    # Tahta koordinatını ekranda çizilecek piksel dikdörtgenine çevirir.
     def kare(self, yer):
         return pygame.Rect(ALAN.x + yer[0] * KARE, ALAN.y + yer[1] * KARE, KARE, KARE)
 
+    # Oyunun mevcut durumuna uygun ekranı çizer.
     def ciz(self):
         if self.durum == "menu":
             self.menu_ciz()
@@ -545,6 +582,7 @@ class Oyun:
             self.oyun_ciz()
             self.sonuc_ciz()
 
+    # Ana menü arka planını ve üç ana butonu yerleştirir.
     def menu_ciz(self):
         self.ekran.fill((0, 0, 0))
         self.ekran.blit(self.a.al("Main Menu", "bg_main_menu.png", boyut=(W, H)), (0, 0))
@@ -563,6 +601,7 @@ class Oyun:
         self.ana_menu_buton_ciz(self.settings_rect, "btn_bg_gray.png", "icon_settings.png", "AYARLAR")
         self.ana_menu_buton_ciz(self.exit_rect, "btn_bg_red.png", "icon_exit.png", "ÇIKIŞ")
 
+    # Zorlayıcı ve normal mod seçim penceresini çizer.
     def mod_menu_ciz(self):
         self.menu_ciz()
         self.kutu((0, 0, W, H), 130)
@@ -591,6 +630,7 @@ class Oyun:
         self.yazi("Ölünce Başa Döner", self.mode_popup_label_font, (64, 66, 74), (self.hard_mode_rect.centerx, r.y + 207))
         self.yazi("Checkpoint Açık", self.mode_popup_label_font, (64, 66, 74), (self.normal_mode_rect.centerx, r.y + 207))
 
+    # Seçili bölgenin dört gezegenini, etiketlerini ve yön oklarını gösterir.
     def level_menu_ciz(self):
         self.ekran.fill((0, 0, 0))
         self.ekran.blit(self.a.region(self.region, f"bg_level_menu_region_{self.region}.png", (W, H)), (0, 0))
@@ -642,6 +682,7 @@ class Oyun:
         else:
             self.next_region_rect = pygame.Rect(0, 0, 0, 0)
 
+    # Açılmış level sayısına göre gezegen yollarının rengini belirler.
     def level_yolu_ciz(self, basla):
         if self.acik_level < basla:
             acik_parca = 0
@@ -661,6 +702,7 @@ class Oyun:
             renk = (245, 245, 245) if i < acik_parca else (150, 158, 166)
             self.kesik_egri_ciz(noktalar, renk, alfa)
 
+    # Üç kontrol noktasından geçen kesik bir Bezier eğrisi çizer.
     def kesik_egri_ciz(self, noktalar, renk, alfa):
         katman = pygame.Surface((W, H), pygame.SRCALPHA)
         ornekler = []
@@ -673,6 +715,7 @@ class Oyun:
         for a, b in zip(ornekler, ornekler[1:]):
             uzakliklar.append(uzakliklar[-1] + math.hypot(b[0] - a[0], b[1] - a[1]))
 
+        # Eğri üzerindeki toplam mesafeye karşılık gelen piksel konumunu bulur.
         def nokta_al(hedef):
             for i in range(1, len(uzakliklar)):
                 if uzakliklar[i] >= hedef:
@@ -693,6 +736,7 @@ class Oyun:
             mesafe += 22
         self.ekran.blit(katman, (0, 0))
 
+    # Gezegen üstündeki level adı etiketini açık, aktif veya kilitli biçimde çizer.
     def level_etiket_ciz(self, level, ad, merkez, aktif, acik):
         dosya = "ui_label_bg_active.png" if aktif else "ui_label_bg.png"
         etiket = self.a.fixed(dosya, (154, 56))
@@ -703,6 +747,7 @@ class Oyun:
         self.yazi(ad, self.level_ad_font, renk, (r.centerx, r.y + 39))
         return r
 
+    # Level başlamadan önce gezegeni büyüten kısa geçiş ekranını çizer.
     def gecis_ciz(self):
         self.level_menu_ciz()
         t = min(1, (pygame.time.get_ticks() - self.gecis_basla) / self.gecis_suresi)
@@ -713,6 +758,7 @@ class Oyun:
         self.yazi(f"Level {self.gecis_level}", self.buyuk, BEYAZ, (W // 2, H // 2 + boy // 2 + 45))
         self.yazi("Hazırlanıyor...", self.font, BEYAZ, (W // 2, H // 2 + boy // 2 + 82))
 
+    # Dünya arka planını, tahtayı, engelleri, elmayı, kapıyı ve yılanı çizer.
     def oyun_ciz(self):
         self.ekran.fill((0, 0, 0))
         self.ekran.blit(self.a.level(self.level, "bg_world.png", (W, H)), (0, 0))
@@ -732,6 +778,7 @@ class Oyun:
             self.ekran.blit(self.a.level(self.level, "item_fruit.png", (KARE, KARE)), self.kare(self.elma_yeri))
         self.yilan_ciz()
 
+    # Üst bilgi alanında level, puan, süre ve toplanan meyveyi gösterir.
     def hud_ciz(self):
         logo = self.a.global_("logo_main.png", (185, 82))
         self.ekran.blit(logo, (54, 54))
@@ -751,6 +798,7 @@ class Oyun:
             self.yazi_sol(metin, self.hud_value_font, BEYAZ, (x + 54, 103))
         self.yardim_ciz()
 
+    # Oyun alanının altında ESC ve yeniden başlatma kısayollarını ortalar.
     def yardim_ciz(self):
         esc = self.a.global_("ui_keycap_esc.png")
         r_key = self.a.global_("ui_keycap_r.png")
@@ -768,6 +816,7 @@ class Oyun:
         x += r_key.get_width() + 12
         self.ekran.blit(yazi2, yazi2.get_rect(midleft=(x, orta)))
 
+    # Baş, düz gövde, dönüş ve kuyruk parçalarını yılanın yönüne göre döndürür.
     def yilan_ciz(self):
         if len(self.yilan) < 2:
             return
@@ -777,21 +826,21 @@ class Oyun:
         turn_img = self.a.global_("snake_body_turn.png", (KARE, KARE))
         tail_img = self.a.global_("snake_tail.png", (KARE, KARE))
 
-        # Pre-pass: draw connecting lines between segment centers to fill junction gaps
+        # Parçaların arasında boşluk kalmaması için önce merkezleri birleştirir.
         SNAKE_COL = (181, 73, 228)
-        arm_w = int(KARE * 0.55)  # matches sprite arm thickness
+        arm_w = int(KARE * 0.55)
         centers = [self.kare(p).center for p in self.yilan]
         for a, b in zip(centers, centers[1:]):
             pygame.draw.line(self.ekran, SNAKE_COL, a, b, arm_w)
 
-        # base HEAD faces RIGHT, base TAIL points UP, base TURN connects RIGHT+DOWN
+        # Kaynak görsellerin başlangıç yönlerine göre dönüş açıları.
         HEAD_ROT = {(1, 0): 0, (-1, 0): 180, (0, -1): 90, (0, 1): 270}
         TAIL_ROT = {(0, -1): 0, (0, 1): 180, (1, 0): 270, (-1, 0): 90}
         TURN_ROT = {
-            frozenset([(1, 0), (0, 1)]): 0,     # RIGHT + DOWN  (base)
-            frozenset([(1, 0), (0, -1)]): 90,   # RIGHT + UP
-            frozenset([(-1, 0), (0, -1)]): 180, # LEFT  + UP
-            frozenset([(-1, 0), (0, 1)]): 270,  # LEFT  + DOWN
+            frozenset([(1, 0), (0, 1)]): 0,
+            frozenset([(1, 0), (0, -1)]): 90,
+            frozenset([(-1, 0), (0, -1)]): 180,
+            frozenset([(-1, 0), (0, 1)]): 270,
         }
 
         n = len(self.yilan)
@@ -816,6 +865,7 @@ class Oyun:
                     img = pygame.transform.rotate(turn_img, angle)
             self.ekran.blit(img, img.get_rect(center=rect.center))
 
+    # Kazanma veya kaybetme sonucunu puan ve istatistiklerle gösterir.
     def sonuc_ciz(self):
         klasor = "Won" if self.durum == "kazandin" else "Lost"
         self.kutu((0, 0, W, H), 45)
@@ -842,12 +892,14 @@ class Oyun:
         yazi = "Devam Et" if klasor == "Won" else "Tekrar"
         self.sonuc_buton_ciz(klasor, self.result_action, btn, ikon, yazi)
 
+    # Sonuç ve pause ekranlarında kullanılan tek bir istatistik kutusunu çizer.
     def sonuc_stat_ciz(self, klasor, rect, ikon, baslik, deger):
         self.ekran.blit(self.a.al("Levels", klasor, "ui_panel_stats_light.png", boyut=rect.size), rect)
         self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(30, 30)), (rect.x + 16, rect.y + 23))
         self.yazi_sol(baslik, self.kucuk, (78, 83, 91), (rect.x + 60, rect.y + 27))
         self.yazi_sol(deger, self.sonuc_stat_val_font, (45, 48, 55), (rect.x + 60, rect.y + 50))
 
+    # Sonuç ekranı butonunu hover büyümesi, ikon ve metinle çizer.
     def sonuc_buton_ciz(self, klasor, rect, bg, ikon, metin):
         pos = pygame.mouse.get_pos()
         hover = rect.collidepoint(pos)
@@ -860,16 +912,17 @@ class Oyun:
         self.ekran.blit(self.a.al("Levels", klasor, bg, boyut=draw_rect.size), draw_rect)
         
         if ikon == "btn_bg_dark_gray.png":
-            # Left-aligned icon (Home)
+            # Ana menü ikonunu butonun soluna yerleştirir.
             self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(24, 24)), 
                             (draw_rect.x + 20, draw_rect.centery - 12))
             self.yazi(metin.upper(), self.sonuc_buton_font, BEYAZ, (draw_rect.centerx + 12, draw_rect.centery - 2))
         else:
-            # Right-aligned icon (Arrow / Replay)
+            # Devam veya tekrar ikonunu butonun sağına yerleştirir.
             self.ekran.blit(self.a.al("Levels", klasor, ikon, boyut=(24, 24)), 
                             (draw_rect.right - 20 - 24, draw_rect.centery - 12))
             self.yazi(metin.upper(), self.sonuc_buton_font, BEYAZ, (draw_rect.centerx - 12, draw_rect.centery - 2))
 
+    # Oyunu karartıp puan, süre, meyve ve pause seçeneklerini gösterir.
     def pause_ciz(self):
         self.kutu((0, 0, W, H), 130)
         modal = self.a.al("Pause", "ui_modal_bg.png", boyut=(620, 720))
@@ -926,6 +979,7 @@ class Oyun:
             self.pause_lobby_rect, "btn_bg_red.png", "icon_exit.png", "LOBİYE DÖN"
         )
 
+    # Pause butonunda ikon ve yazıyı ortak merkez etrafında hizalar.
     def pause_buton_ciz(self, rect, bg, ikon, metin):
         draw_rect = rect
         self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
@@ -943,6 +997,7 @@ class Oyun:
         self.ekran.blit(ikon_img, (bas_x, ikon_y))
         self.ekran.blit(yazi, (bas_x + ikon_img.get_width() + gap, yazi_y))
 
+    # Ayarlar ekranındaki açma-kapama butonlarını çizer.
     def ayar_buton_ciz(self, rect, bg, metin, font=None):
         pos = pygame.mouse.get_pos()
         hover = rect.collidepoint(pos)
@@ -956,6 +1011,7 @@ class Oyun:
         self.ekran.blit(self.a.al("Settings", bg, boyut=draw_rect.size), draw_rect)
         self.yazi(metin, f, BEYAZ, draw_rect.center)
 
+    # Müzik ve efekt seslerinin açılıp kapatıldığı pencereyi çizer.
     def ayarlar_ciz(self):
         self.kutu((0, 0, W, H), 130)
         modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(500, 300))
@@ -984,6 +1040,7 @@ class Oyun:
         self.ayar_buton_ciz(self.music_toggle, "btn_bg_green.png" if self.ses_acik else "btn_bg_red.png",
                             "AÇIK" if self.ses_acik else "KAPALI", self.ayarlar_buton_font)
 
+    # Oyundan çıkmadan önce onay isteyen pencereyi çizer.
     def cikis_ciz(self):
         self.kutu((0, 0, W, H), 105)
         modal = self.a.al("Quit", "ui_modal_bg.png", boyut=(430, 272))
@@ -997,11 +1054,13 @@ class Oyun:
         self.cikis_buton_ciz(self.quit_yes, "btn_bg_green.png", "icon_check.png", "EVET")
         self.cikis_buton_ciz(self.quit_no, "btn_bg_red.png", "icon_cross_white.png", "HAYIR")
 
+    # Çıkış penceresindeki evet ve hayır butonlarını çizer.
     def cikis_buton_ciz(self, rect, bg, ikon, metin):
         self.ekran.blit(self.a.al("Quit", bg, boyut=rect.size), rect)
         self.ekran.blit(self.a.al("Quit", ikon, boyut=(30, 30)), (rect.x + 14, rect.y + 12))
         self.yazi(metin, self.buton_font, BEYAZ, (rect.centerx + 18, rect.centery - 1))
 
+    # Ana menü butonunun ikon ve yazısını birlikte ortalar.
     def ana_menu_buton_ciz(self, rect, bg, ikon, metin):
         pos = pygame.mouse.get_pos()
         hover = rect.collidepoint(pos)
@@ -1030,6 +1089,7 @@ class Oyun:
         self.ekran.blit(ikon_img, (ikon_x, ikon_y))
         self.ekran.blit(yazi_img, (yazi_x, yazi_y))
 
+    # Oyun modu seçimindeki butonları hover etkisiyle çizer.
     def mod_buton_ciz(self, rect, bg, metin, font):
         pos = pygame.mouse.get_pos()
         hover = rect.collidepoint(pos)
@@ -1042,19 +1102,23 @@ class Oyun:
         self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
         self.yazi(metin, font, BEYAZ, (draw_rect.centerx, draw_rect.centery - 4))
 
+    # Ekranın istenen bölümüne yarı saydam siyah katman ekler.
     def kutu(self, rect, alpha):
         s = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA)
         s.fill((0, 0, 0, alpha))
         self.ekran.blit(s, rect[:2])
 
+    # Metni verilen noktanın tam merkezine yazar.
     def yazi(self, metin, font, renk, merkez):
         img = font.render(metin, True, renk)
         self.ekran.blit(img, img.get_rect(center=merkez))
 
+    # Metni verilen noktanın orta-sol kenarına hizalar.
     def yazi_sol(self, metin, font, renk, orta_sol):
         img = font.render(metin, True, renk)
         self.ekran.blit(img, img.get_rect(midleft=orta_sol))
 
+    # Olayları, oyun güncellemesini ve ekran çizimini 120 FPS döngüsünde çalıştırır.
     def calistir(self):
         self.ciz()
         pygame.display.flip()
