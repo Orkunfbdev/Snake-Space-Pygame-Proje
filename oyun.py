@@ -928,10 +928,12 @@ class Oyun:
         self.yazi(f"{mod}  |  Seviye {self.level}", self.kucuk, (78, 83, 91),
                   (r.centerx, r.y + 375))
 
-        buton_x = r.centerx - 220
-        self.pause_resume_rect = pygame.Rect(buton_x, r.y + 405, 440, 72)
-        self.pause_settings_rect = pygame.Rect(buton_x, r.y + 490, 440, 72)
-        self.pause_lobby_rect = pygame.Rect(buton_x, r.y + 575, 440, 72)
+        self.pause_resume_rect = pygame.Rect(0, r.y + 400, 300, 82)
+        self.pause_settings_rect = pygame.Rect(0, r.y + 492, 300, 82)
+        self.pause_lobby_rect = pygame.Rect(0, r.y + 584, 300, 82)
+        self.pause_resume_rect.centerx = r.centerx
+        self.pause_settings_rect.centerx = r.centerx
+        self.pause_lobby_rect.centerx = r.centerx
         self.pause_buton_ciz(
             self.pause_resume_rect, "btn_bg_pink.png", "icon_play.png", "DEVAM ET"
         )
@@ -943,10 +945,7 @@ class Oyun:
         )
 
     def pause_buton_ciz(self, rect, bg, ikon, metin):
-        draw_rect = rect.copy()
-        if rect.collidepoint(pygame.mouse.get_pos()):
-            draw_rect = draw_rect.inflate(8, 6)
-
+        draw_rect = rect
         self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
         yazi = self.menu_buton_font.render(metin, True, BEYAZ)
         ikon_kaynak = self.a.al("Main Menu", ikon)
