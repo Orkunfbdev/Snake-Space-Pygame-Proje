@@ -890,14 +890,14 @@ class Oyun:
 
     def pause_ciz(self):
         self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(680, 404))
+        modal = self.a.al("Settings", "ui_modal_bg.png", boyut=(1120, 480))
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
 
-        self.yazi("DURAKLATILDI", self.ayarlar_baslik_font, BEYAZ,
-                  (r.centerx, r.y + 47))
+        self.yazi("DURAKLATILDI", self.menu_buton_font, BEYAZ,
+                  (r.centerx, r.y + 55))
 
-        self.pause_close_rect = pygame.Rect(r.right - 68, r.y + 17, 48, 48)
+        self.pause_close_rect = pygame.Rect(r.right - 78, r.y + 20, 54, 54)
         close_rect = self.pause_close_rect.copy()
         if close_rect.collidepoint(pygame.mouse.get_pos()):
             close_rect = close_rect.inflate(6, 6)
@@ -908,13 +908,22 @@ class Oyun:
         self.yazi("X", self.buton_font, BEYAZ, close_rect.center)
 
         mod = "Zorlayıcı Mod" if self.oyun_modu == "zor" else "Normal Mod"
-        bilgi = f"{mod}   |   Seviye {self.level}   |   Skor {self.puan}"
-        self.yazi(bilgi, self.font, (64, 66, 74), (r.centerx, r.y + 151))
+        bilgi = f"Oyun Modu: {mod}   |   Seviye: {self.level}   |   Skor: {self.puan}"
+        self.yazi(bilgi, self.ayarlar_label_font, (64, 66, 74),
+                  (r.centerx, r.y + 180))
 
-        buton_y = r.y + 245
-        self.pause_resume_rect = pygame.Rect(r.x + 38, buton_y, 180, 68)
-        self.pause_settings_rect = pygame.Rect(r.x + 235, buton_y, 190, 68)
-        self.pause_lobby_rect = pygame.Rect(r.x + 442, buton_y, 200, 68)
+        buton_y = r.y + 292
+        buton_araligi = 24
+        devam_w, ayarlar_w, lobi_w = 300, 320, 360
+        toplam_w = devam_w + ayarlar_w + lobi_w + buton_araligi * 2
+        bas_x = r.centerx - toplam_w // 2
+        self.pause_resume_rect = pygame.Rect(bas_x, buton_y, devam_w, 82)
+        self.pause_settings_rect = pygame.Rect(
+            self.pause_resume_rect.right + buton_araligi, buton_y, ayarlar_w, 82
+        )
+        self.pause_lobby_rect = pygame.Rect(
+            self.pause_settings_rect.right + buton_araligi, buton_y, lobi_w, 82
+        )
         self.pause_buton_ciz(
             self.pause_resume_rect, "btn_bg_pink.png", "icon_play.png", "DEVAM ET"
         )
@@ -931,13 +940,13 @@ class Oyun:
             draw_rect = draw_rect.inflate(8, 6)
 
         self.ekran.blit(self.a.al("Main Menu", bg, boyut=draw_rect.size), draw_rect)
-        yazi = self.buton_font.render(metin, True, BEYAZ)
+        yazi = self.menu_buton_font.render(metin, True, BEYAZ)
         ikon_kaynak = self.a.al("Main Menu", ikon)
         ikon_h = int(yazi.get_height() * 0.8)
         ikon_w = round(ikon_kaynak.get_width() * ikon_h / ikon_kaynak.get_height())
         ikon_img = pygame.transform.smoothscale(ikon_kaynak, (ikon_w, ikon_h))
 
-        gap = 12
+        gap = 14
         toplam = ikon_img.get_width() + gap + yazi.get_width()
         bas_x = draw_rect.centerx - toplam // 2
         ikon_y = draw_rect.centery - ikon_img.get_height() // 2
