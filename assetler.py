@@ -19,11 +19,14 @@ class Assetler:
     def al(self, *parca, boyut=None):
         anahtar = (parca, boyut)
         if anahtar not in self.cache:
-            yol = GUI.joinpath(*parca)
-            img = pygame.image.load(str(yol)).convert_alpha()
-            if boyut:
-                img = pygame.transform.smoothscale(img, boyut)
-            self.cache[anahtar] = img
+            kaynak_anahtar = (parca, None)
+            if kaynak_anahtar not in self.cache:
+                yol = GUI.joinpath(*parca)
+                self.cache[kaynak_anahtar] = pygame.image.load(str(yol)).convert_alpha()
+            kaynak = self.cache[kaynak_anahtar]
+            self.cache[anahtar] = (
+                pygame.transform.smoothscale(kaynak, boyut) if boyut else kaynak
+            )
         return self.cache[anahtar]
 
     # Seçili level klasöründen görsel getirir.

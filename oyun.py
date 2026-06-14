@@ -37,6 +37,17 @@ class Oyun:
         self.ekran = pygame.display.set_mode((W, H), pygame.DOUBLEBUF)
         self.saat = pygame.time.Clock()
         self.a = Assetler()
+        self.yilan_bas_detayi = self.yilan_bas_detayi_hazirla()
+        self.pause_panel_radius = 58
+        self.pause_panel_border = 10
+        self.pause_modal = self.dikey_uzat(
+            self.a.al("Pause", "ui_modal_bg.png"), (620, 720)
+        )
+        pygame.draw.rect(
+            self.pause_modal, (0, 0, 0, 0), self.pause_modal.get_rect(),
+            width=self.pause_panel_border,
+            border_radius=self.pause_panel_radius
+        )
         self.fontlari_kur()
         self.menu_muzik = GUI / "Audio" / "game_menu.mp3"
         self.game_over_muzik = GUI / "Audio" / "game_over.wav"
@@ -64,6 +75,13 @@ class Oyun:
         self.gecis_basla = 0
         self.gecis_level = 1
         self.gecis_puan = None
+        self.gecis_arka_plan = None
+        self.gecis_gezegen_kaynak = None
+        self.gecis_gezegen_cache = {}
+        self.gecis_level_yazi = None
+        self.gecis_hazir_yazi = None
+        self.gecis_karartma = pygame.Surface((W, H)).convert()
+        self.gecis_karartma.fill((0, 0, 0))
         self.son_sure = -1
         self.sesleri_hazirla()
         self.level_kur()
@@ -290,19 +308,38 @@ class Oyun:
     def gecis_baslat(self, level, puan=None):
         self.gecis_level = level
         self.gecis_puan = puan
-        self.region = self.bolge_no(level)
+        hedef_region = self.bolge_no(level)
+
+        # Değişmeyen menü ve metinleri animasyon boyunca tekrar üretme.
+        if self.durum == "level_menu" and self.region == hedef_region:
+            self.gecis_arka_plan = self.ekran.copy()
+        else:
+            self.region = hedef_region
+            self.level_menu_ciz()
+            self.gecis_arka_plan = self.ekran.copy()
+        self.region = hedef_region
+        self.gecis_gezegen_kaynak = self.a.al(*self.gezegen_yolu(level))
+        self.gecis_gezegen_cache = {
+            boy: pygame.transform.smoothscale(
+                self.gecis_gezegen_kaynak, (boy, boy)
+            )
+            for boy in range(120, 331, 2)
+        }
+        self.gecis_level_yazi = self.buyuk.render(
+            f"Level {level}", True, BEYAZ
+        )
+        self.gecis_hazir_yazi = self.font.render(
+            "Hazırlanıyor...", True, BEYAZ
+        )
+
+        # Yeni leveli animasyon başlamadan hazırla; bitiş karesinde takılma olmasın.
+        self.level_hazirla(level, puan)
         self.level_gecis_sesi_cal()
         self.gecis_basla = pygame.time.get_ticks()
         self.durum = "gecis"
 
-    # Geçiş bitince leveli verilen puanla oynanabilir duruma getirir.
-    def level_baslat(self, level, puan=None):
-        if self.game_over_sesi:
-            self.game_over_sesi.stop()
-        if self.level_gecis_sesi:
-            self.level_gecis_sesi.stop()
-        if self.ses_hazir and self.menu_caliyor:
-            pygame.mixer.music.set_volume(self.muzik_ses)
+    # Level verilerini ve sabit oyun yüzeyini oynanış başlamadan hazırlar.
+    def level_hazirla(self, level, puan=None):
         self.level = level
         if puan is not None:
             self.puan = puan
@@ -310,6 +347,26 @@ class Oyun:
             self.puan = 0
         self.level_puan_baslangic = self.puan
         self.level_kur()
+
+    # Geçiş bitince leveli verilen puanla oynanabilir duruma getirir.
+    def level_baslat(self, level, puan=None, hazir=False):
+        if self.game_over_sesi:
+            self.game_over_sesi.stop()
+        if self.level_gecis_sesi:
+            self.level_gecis_sesi.stop()
+        if self.ses_hazir and self.menu_caliyor:
+            pygame.mixer.music.set_volume(self.muzik_ses)
+        if not hazir:
+            self.level_hazirla(level, puan)
+        else:
+            simdi = time.time()
+            self.baslama = simdi
+            self.son_hareket = pygame.time.get_ticks()
+            if self.elma_yeri:
+                self.elma_zamani = simdi
+            self.gecis_arka_plan = None
+            self.gecis_gezegen_kaynak = None
+            self.gecis_gezegen_cache = {}
         self.menu_muzigi_oyunda_kapat()
         self.durum = "oyun"
 
@@ -528,7 +585,7 @@ class Oyun:
         self.sesleri_guncelle()
         if self.durum == "gecis":
             if pygame.time.get_ticks() - self.gecis_basla > self.gecis_suresi:
-                self.level_baslat(self.gecis_level, self.gecis_puan)
+                self.level_baslat(self.gecis_level, self.gecis_puan, hazir=True)
                 return True
             return True
         if self.durum != "oyun" or pygame.time.get_ticks() - self.son_hareket < self.hiz():
@@ -538,6 +595,7 @@ class Oyun:
         x, y = self.yilan[0]
         bas = (x + self.yon[0], y + self.yon[1])
         if self.carpti(bas):
+            self.onceki_yilan = list(self.yilan)
             self.sonuc_suresi = time.time() - self.baslama
             self.kaybetme_sesi_cal()
             self.durum = "kaybettin"
@@ -550,6 +608,7 @@ class Oyun:
         else:
             self.yilan.pop()
         if self.kapi_acik and bas == self.kapi_yeri:
+            self.onceki_yilan = list(self.yilan)
             self.acik_level = min(SON_LEVEL, max(self.acik_level, self.level + 1))
             self.sonuc_suresi = time.time() - self.baslama
             self.durum = "kazandin"
@@ -766,14 +825,38 @@ class Oyun:
 
     # Level başlamadan önce gezegeni büyüten kısa geçiş ekranını çizer.
     def gecis_ciz(self):
-        self.level_menu_ciz()
+        if self.gecis_arka_plan is None:
+            self.level_menu_ciz()
+        else:
+            self.ekran.blit(self.gecis_arka_plan, (0, 0))
         t = min(1, (pygame.time.get_ticks() - self.gecis_basla) / self.gecis_suresi)
-        self.kutu((0, 0, W, H), int(170 * t))
-        boy = int(120 + 210 * math.sin(t * math.pi / 2))
-        gezegen = self.a.al(*self.gezegen_yolu(self.gecis_level), boyut=(boy, boy))
+        self.gecis_karartma.set_alpha(int(170 * t))
+        self.ekran.blit(self.gecis_karartma, (0, 0))
+        ham_boy = 120 + 210 * math.sin(t * math.pi / 2)
+        boy = min(330, 120 + round((ham_boy - 120) / 2) * 2)
+        if boy not in self.gecis_gezegen_cache:
+            kaynak = self.gecis_gezegen_kaynak or self.a.al(
+                *self.gezegen_yolu(self.gecis_level)
+            )
+            self.gecis_gezegen_cache[boy] = pygame.transform.smoothscale(
+                kaynak, (boy, boy)
+            )
+        gezegen = self.gecis_gezegen_cache[boy]
         self.ekran.blit(gezegen, gezegen.get_rect(center=(W // 2, H // 2)))
-        self.yazi(f"Level {self.gecis_level}", self.buyuk, BEYAZ, (W // 2, H // 2 + boy // 2 + 45))
-        self.yazi("Hazırlanıyor...", self.font, BEYAZ, (W // 2, H // 2 + boy // 2 + 82))
+        level_yazi = self.gecis_level_yazi or self.buyuk.render(
+            f"Level {self.gecis_level}", True, BEYAZ
+        )
+        hazir_yazi = self.gecis_hazir_yazi or self.font.render(
+            "Hazırlanıyor...", True, BEYAZ
+        )
+        self.ekran.blit(
+            level_yazi,
+            level_yazi.get_rect(center=(W // 2, H // 2 + boy // 2 + 45))
+        )
+        self.ekran.blit(
+            hazir_yazi,
+            hazir_yazi.get_rect(center=(W // 2, H // 2 + boy // 2 + 82))
+        )
 
     # Dünya arka planını, tahtayı, engelleri, elmayı, kapıyı ve yılanı çizer.
     def oyun_ciz(self):
@@ -825,12 +908,22 @@ class Oyun:
         x += r_key.get_width() + 12
         self.ekran.blit(yazi2, yazi2.get_rect(midleft=(x, orta)))
 
+    # Kafa görselinden mor zemini kaldırıp yalnızca göz ve dili hazırlar.
+    def yilan_bas_detayi_hazirla(self):
+        detay = self.a.global_("snake_head.png").copy()
+        for x in range(detay.get_width()):
+            for y in range(detay.get_height()):
+                r, g, b, a = detay.get_at((x, y))
+                goz = 12 <= x <= 38 and 14 <= y <= 40 and max(r, g, b) < 150
+                dil = x >= 38 and r > 180 and g < 130 and b < 150 and r > b
+                if not (a and (goz or dil)):
+                    detay.set_at((x, y), (0, 0, 0, 0))
+        return pygame.transform.smoothscale(detay, (KARE, KARE))
+
     # Yılanı yuvarlak köşeli tek parça gövde ve yönüne dönen baş ile çizer.
     def yilan_ciz(self):
         if len(self.yilan) < 2:
             return
-
-        head_img = self.a.global_("snake_head.png", (KARE, KARE))
 
         # Mantık kareleri arasında kalan konumu hesaplayarak yılanı akıcı kaydırır.
         oran = min(1, (pygame.time.get_ticks() - self.son_hareket) / self.hiz())
@@ -853,19 +946,30 @@ class Oyun:
                     yol.append(kose)
             yol.append(bitis)
 
-        # Kalın çizgiler ve daire uçlar gövdeyi kesintisiz bir kapsül gibi gösterir.
-        SNAKE_COL = (181, 73, 228)
-        arm_w = int(KARE * 0.55)
-        for a, b in zip(yol, yol[1:]):
+        # Aynı doğrultudaki ara noktaları kaldırarak düz gövdede çıkıntı oluşmasını önler.
+        sade_yol = [yol[0]]
+        for i in range(1, len(yol) - 1):
+            onceki, simdiki, sonraki = yol[i - 1], yol[i], yol[i + 1]
+            onceki_yon = (simdiki[0] - onceki[0], simdiki[1] - onceki[1])
+            sonraki_yon = (sonraki[0] - simdiki[0], sonraki[1] - simdiki[1])
+            if (onceki_yon[0] * sonraki_yon[1]
+                    != onceki_yon[1] * sonraki_yon[0]):
+                sade_yol.append(simdiki)
+        sade_yol.append(yol[-1])
+
+        # Yalnızca uçları ve gerçek dönüş köşelerini yuvarlatır.
+        SNAKE_COL = (196, 102, 239)
+        arm_w = 20
+        for a, b in zip(sade_yol, sade_yol[1:]):
             pygame.draw.line(self.ekran, SNAKE_COL, a, b, arm_w)
-        for nokta in yol:
+        for nokta in sade_yol:
             pygame.draw.circle(self.ekran, SNAKE_COL, nokta, arm_w // 2)
 
-        # Baş görselinin başlangıç yönüne göre dönüş açısı.
+        # Göz ve dil detayını hareket yönüne göre başın üzerine yerleştirir.
         HEAD_ROT = {(1, 0): 0, (-1, 0): 180, (0, -1): 90, (0, 1): 270}
         angle = HEAD_ROT.get(tuple(self.yon), 0)
-        head_img = pygame.transform.rotate(head_img, angle)
-        self.ekran.blit(head_img, head_img.get_rect(center=centers[0]))
+        detay = pygame.transform.rotate(self.yilan_bas_detayi, angle)
+        self.ekran.blit(detay, detay.get_rect(center=centers[0]))
 
     # Kazanma veya kaybetme sonucunu puan ve istatistiklerle gösterir.
     def sonuc_ciz(self):
@@ -927,7 +1031,7 @@ class Oyun:
     # Oyunu karartıp puan, süre, meyve ve pause seçeneklerini gösterir.
     def pause_ciz(self):
         self.kutu((0, 0, W, H), 130)
-        modal = self.a.al("Pause", "ui_modal_bg.png", boyut=(620, 720))
+        modal = self.pause_modal
         r = modal.get_rect(center=(W // 2, H // 2))
         self.ekran.blit(modal, r)
 
@@ -980,6 +1084,7 @@ class Oyun:
         self.pause_buton_ciz(
             self.pause_lobby_rect, "btn_bg_red.png", "icon_exit.png", "LOBİYE DÖN"
         )
+        self.draw_rounded_panel(self.ekran, r)
 
     # Pause butonunda ikon ve yazıyı ortak merkez etrafında hizalar.
     def pause_buton_ciz(self, rect, bg, ikon, metin):
@@ -1109,6 +1214,98 @@ class Oyun:
         s = pygame.Surface((rect[2], rect[3]), pygame.SRCALPHA)
         s.fill((0, 0, 0, alpha))
         self.ekran.blit(s, rect[:2])
+
+    # Pause panelinin dış border ve glow katmanını tek, simetrik çizimle oluşturur.
+    def draw_rounded_panel(self, hedef, rect):
+        olcek = 4
+        bosluk = 12
+        yaricap = self.pause_panel_radius
+        border = self.pause_panel_border
+        katman_boyutu = (rect.w + bosluk * 2, rect.h + bosluk * 2)
+        buyuk = pygame.Surface(
+            (katman_boyutu[0] * olcek, katman_boyutu[1] * olcek),
+            pygame.SRCALPHA
+        )
+        panel_rect = pygame.Rect(
+            bosluk * olcek, bosluk * olcek,
+            rect.w * olcek, rect.h * olcek
+        )
+
+        # Bütün glow halkaları aynı rect ve radius hesabından türetilir.
+        for genisleme, kalinlik, renk in (
+            (8, 4, (117, 43, 177, 34)),
+            (5, 4, (157, 52, 211, 54)),
+            (2, 3, (205, 64, 235, 78)),
+        ):
+            glow_rect = panel_rect.inflate(
+                genisleme * 2 * olcek, genisleme * 2 * olcek
+            )
+            pygame.draw.rect(
+                buyuk, renk, glow_rect,
+                width=kalinlik * olcek,
+                border_radius=(yaricap + genisleme) * olcek
+            )
+
+        # Dikey pembe-mor gradient yalnızca ortak rounded border maskesine uygulanır.
+        maske = pygame.Surface(buyuk.get_size(), pygame.SRCALPHA)
+        pygame.draw.rect(
+            maske, (255, 255, 255, 255), panel_rect,
+            border_radius=yaricap * olcek
+        )
+        ic_rect = panel_rect.inflate(-border * 2 * olcek, -border * 2 * olcek)
+        pygame.draw.rect(
+            maske, (0, 0, 0, 0), ic_rect,
+            border_radius=(yaricap - border) * olcek
+        )
+
+        gradient = pygame.Surface(buyuk.get_size(), pygame.SRCALPHA)
+        ust = (255, 96, 244)
+        alt = (193, 70, 235)
+        for y in range(panel_rect.top, panel_rect.bottom):
+            oran = (y - panel_rect.top) / max(1, panel_rect.h - 1)
+            renk = tuple(round(ust[i] + (alt[i] - ust[i]) * oran) for i in range(3))
+            pygame.draw.line(
+                gradient, (*renk, 255),
+                (panel_rect.left, y), (panel_rect.right - 1, y)
+            )
+        gradient.blit(maske, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        buyuk.blit(gradient, (0, 0))
+
+        katman = pygame.transform.smoothscale(buyuk, katman_boyutu)
+        sol_yari = katman.subsurface((0, 0, katman.get_width() // 2,
+                                     katman.get_height())).copy()
+        katman.fill(
+            (0, 0, 0, 0),
+            (sol_yari.get_width(), 0, sol_yari.get_width(), katman.get_height())
+        )
+        katman.blit(
+            pygame.transform.flip(sol_yari, True, False),
+            (katman.get_width() - sol_yari.get_width(), 0)
+        )
+        hedef.blit(katman, (rect.x - bosluk, rect.y - bosluk))
+
+    # Yuvarlak köşeleri bozmadan görselin yalnızca düz orta bölümünü uzatır.
+    def dikey_uzat(self, kaynak, boyut):
+        genislik, yukseklik = boyut
+        oran = genislik / kaynak.get_width()
+        normal_yukseklik = round(kaynak.get_height() * oran)
+        kaynak = pygame.transform.smoothscale(kaynak, (genislik, normal_yukseklik))
+        yari = genislik // 2
+        sol = kaynak.subsurface((0, 0, yari, normal_yukseklik)).copy()
+        kaynak.blit(pygame.transform.flip(sol, True, False), (genislik - yari, 0))
+        kenar = min(120, normal_yukseklik // 3)
+        orta = kaynak.subsurface((0, kenar, genislik, normal_yukseklik - kenar * 2))
+        sonuc = pygame.Surface(boyut, pygame.SRCALPHA)
+        sonuc.blit(kaynak, (0, 0), (0, 0, genislik, kenar))
+        sonuc.blit(
+            pygame.transform.smoothscale(orta, (genislik, yukseklik - kenar * 2)),
+            (0, kenar)
+        )
+        sonuc.blit(
+            kaynak, (0, yukseklik - kenar),
+            (0, normal_yukseklik - kenar, genislik, kenar)
+        )
+        return sonuc
 
     # Metni verilen noktanın tam merkezine yazar.
     def yazi(self, metin, font, renk, merkez):
